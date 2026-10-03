@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.next-demo/
+out/
+.env*
+!.env.example
+*.tsbuildinfo
+playwright-report/
+test-results/
+test-results-*/
+.vercel/
+*.log
+
+# Generated from pinned OCR packages by dev/build
+public/ocr/

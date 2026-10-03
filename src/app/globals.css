@@ -1,0 +1,166 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(240 10% 12%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 10% 12%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(240 10% 12%);
+  --primary: hsl(258 90% 60%);
+  --primary-foreground: white;
+  --secondary: hsl(258 90% 96%);
+  --secondary-foreground: hsl(258 70% 40%);
+  --muted: hsl(240 5% 96%);
+  --muted-foreground: hsl(240 5% 43%);
+  --accent: hsl(258 90% 96%);
+  --accent-foreground: hsl(258 70% 40%);
+  --destructive: hsl(0 84% 60%);
+  --border: hsl(240 6% 90%);
+  --input: hsl(240 6% 88%);
+  --ring: hsl(258 90% 60%);
+  --success: hsl(151 65% 45%);
+  --success-text: hsl(151 65% 32%);
+  --success-surface: hsl(151 65% 95%);
+  --warning: hsl(38 92% 55%);
+  --canvas: #f8f9fc;
+  --radius: 0.75rem;
+  --chart-1: hsl(258 90% 60%);
+  --chart-2: hsl(151 65% 45%);
+  --chart-3: hsl(38 92% 55%);
+  --chart-4: hsl(0 84% 60%);
+  --chart-5: #60a5fa;
+}
+.dark {
+  --background: hsl(258 20% 12%);
+  --foreground: #f4f1fa;
+  --card: hsl(258 18% 16%);
+  --card-foreground: #f4f1fa;
+  --popover: hsl(258 18% 16%);
+  --popover-foreground: #f4f1fa;
+  --primary: hsl(258 95% 73%);
+  --primary-foreground: #171024;
+  --secondary: hsl(258 30% 24%);
+  --secondary-foreground: #dacaff;
+  --muted: hsl(258 15% 21%);
+  --muted-foreground: #aaa3ba;
+  --accent: hsl(258 30% 24%);
+  --accent-foreground: #e4d5ff;
+  --border: hsl(258 14% 27%);
+  --input: hsl(258 14% 32%);
+  --ring: #b39bff;
+  --success: hsl(151 65% 60%);
+  --success-text: hsl(151 65% 60%);
+  --success-surface: hsl(151 25% 18%);
+  --canvas: hsl(258 20% 12%);
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success-text);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-canvas: var(--canvas);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-jakarta);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+.gradient-button {
+  color: white;
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-jakarta), sans-serif;
+    letter-spacing: -0.035em;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  ::selection {
+    background: #ddd0ff;
+    color: #391569;
+  }
+}
+@layer components {
+  .panel {
+    @apply rounded-2xl border bg-card p-6 shadow-sm;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[.16em] text-muted-foreground;
+  }
+  .field {
+    @apply flex flex-col gap-2 text-sm font-medium;
+  }
+  .field select,
+  .field textarea {
+    @apply w-full rounded-xl border bg-background px-3 py-2.5 text-sm;
+  }
+  .gradient-button {
+    @apply bg-gradient-to-r from-purple-600 to-indigo-500 text-white transition-transform hover:scale-[1.02] hover:brightness-110;
+  }
+  .number {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.035em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

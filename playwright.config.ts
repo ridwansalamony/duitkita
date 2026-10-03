@@ -1,0 +1,21 @@
+import { defineConfig } from "@playwright/test";
+export default defineConfig({
+  testDir: "./tests",
+  fullyParallel: false,
+  workers: 1,
+  timeout: 120000,
+  expect: { timeout: 15000 },
+  reporter: [["list"], ["html", { open: "never" }]],
+  use: {
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
+    channel: "chrome",
+    headless: true,
+    reducedMotion: "reduce",
+    actionTimeout: 15000,
+    viewport: { width: 1440, height: 1000 },
+    locale: "id-ID",
+    timezoneId: "Asia/Jakarta",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+});

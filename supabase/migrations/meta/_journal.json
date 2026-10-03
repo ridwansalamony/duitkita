@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790791860301,
+      "tag": "0000_rare_gambit",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790791899615,
+      "tag": "0001_isolasi_keluarga",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790791899616,
+      "tag": "0002_realtime_aktivitas",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790791899617,
+      "tag": "0003_tabungan_dompet_bersama",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790791899618,
+      "tag": "0004_cegah_saldo_minus",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790791899619,
+      "tag": "0005_budget_dan_form_transaksi",
+      "breakpoints": true
+    }
+  ]
+}

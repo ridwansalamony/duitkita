@@ -1,0 +1,8 @@
+allowBuilds:
+  unrs-resolver: true
+  sharp: true
+  esbuild: true
+  tesseract.js: false
+  core-js: false
+overrides:
+  postcss: ^8.5.23
