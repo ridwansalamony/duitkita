@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { DemoProvider } from "@/lib/dummy/store";
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <DemoProvider>
         <Toaster
           richColors
