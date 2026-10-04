@@ -378,16 +378,18 @@ test("tampilan mobile, dark mode, dan screenshot hasil", async ({ page }) => {
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Ganti tema terang atau gelap" })
+    .getByRole("button", { name: "Pilih tema tampilan" })
     .click();
+  await page.getByRole("menuitemradio", { name: "Gelap", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await page.screenshot({
     path: "docs/screenshots/dashboard-dark.png",
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Ganti tema terang atau gelap" })
+    .getByRole("button", { name: "Pilih tema tampilan" })
     .click();
+  await page.getByRole("menuitemradio", { name: "Terang", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   for (const route of [
     "/",

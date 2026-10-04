@@ -1,7 +1,7 @@
 "use client";
 import { isDemo } from "@/lib/mode";
 import Link from "next/link";
-import { useTheme } from "next-themes";
+export { ThemeToggle } from "./theme-toggle";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowDownLeft,
@@ -20,8 +20,6 @@ import {
   Briefcase,
   Gift,
   Tag,
-  Moon,
-  Sun,
   Plus,
   ArrowRight,
   type LucideIcon,
@@ -100,20 +98,6 @@ export function Logo({ light = false }: { light?: boolean }) {
       </span>
       DuitKita<span className="-ml-2 text-primary">.</span>
     </Link>
-  );
-}
-export function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="Ganti tema terang atau gelap"
-      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-    >
-      <Sun className="hidden size-4 dark:block" />
-      <Moon className="size-4 dark:hidden" />
-    </Button>
   );
 }
 export function CurrencyDisplay({
