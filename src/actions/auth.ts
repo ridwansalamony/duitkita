@@ -4,6 +4,7 @@ import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { supabaseServer } from "@/lib/supabase/server";
 import { withIdentity } from "@/db";
+import { appUrl } from "@/lib/app-url";
 type AuthResult = { error?: string; success?: boolean; confirmed?: boolean };
 const email = z.string().trim().email().max(255);
 const password = z
@@ -12,8 +13,6 @@ const password = z
   .max(128)
   .regex(/[A-Za-z]/)
   .regex(/[0-9]/);
-const appUrl = () =>
-  new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").origin;
 export async function register(input: unknown): Promise<AuthResult> {
   const parsed = z
     .object({

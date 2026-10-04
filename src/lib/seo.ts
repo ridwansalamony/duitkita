@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-export const siteUrl = () =>
-  new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").origin;
+import { appUrl } from "./app-url";
+export const siteUrl = appUrl;
 export const publicPages = {
   "/": {
     title: "Uang berdua, tercatat berdua",

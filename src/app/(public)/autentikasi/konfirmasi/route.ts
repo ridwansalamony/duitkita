@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { appUrl } from "@/lib/app-url";
 export async function GET(request: NextRequest) {
-  const origin=new URL(process.env.NEXT_PUBLIC_APP_URL||"http://localhost:3000").origin;
+  const origin = appUrl();
   const code = request.nextUrl.searchParams.get("code");
   const requested = request.nextUrl.searchParams.get("next") || "";
   const next =
