@@ -263,7 +263,7 @@ export function ReportsPage() {
                   className="mt-3 block text-2xl font-semibold"
                 />
                 <p className="mt-3 text-[10px] text-muted-foreground">
-                  {tanggal(start)} – {tanggal(end, true)}
+                  {tanggal(start)} - {tanggal(end, true)}
                 </p>
               </div>
             ))}

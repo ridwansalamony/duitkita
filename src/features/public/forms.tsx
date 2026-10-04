@@ -338,7 +338,7 @@ export function ContactForm() {
       <div className="panel">
         <h2 className="text-xl font-bold">Tulis pesan Anda</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Form demo — pesan tidak dikirim.
+          Form demo - pesan tidak dikirim.
         </p>
         {sent ? (
           <div className="mt-8 rounded-xl bg-success-surface p-6">

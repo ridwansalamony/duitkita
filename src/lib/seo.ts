@@ -38,7 +38,7 @@ export function pageMetadata(path: string, title?: string): Metadata {
       ? { index: true, follow: true }
       : { index: false, follow: false },
     openGraph: {
-      title: `${name} — DuitKita`,
+      title: `${name} - DuitKita`,
       description,
       url,
       siteName: "DuitKita",
@@ -50,7 +50,7 @@ export function pageMetadata(path: string, title?: string): Metadata {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${name} — DuitKita`,
+      title: `${name} - DuitKita`,
       description,
       images: [siteUrl() + "/opengraph-image"],
     },
