@@ -40,8 +40,21 @@ export async function GET(request: NextRequest) {
         },
       );
     return NextResponse.json(
-      { error: "Laporan belum dapat dimuat. Coba kembali." },
-      { status: 503, headers },
+      {
+        error:
+          error instanceof Error &&
+          error.message.startsWith("Laporan terlalu besar.")
+            ? error.message
+            : "Laporan belum dapat dimuat. Coba kembali.",
+      },
+      {
+        status:
+          error instanceof Error &&
+          error.message.startsWith("Laporan terlalu besar.")
+            ? 422
+            : 503,
+        headers,
+      },
     );
   }
 }

@@ -12,6 +12,20 @@ const required = [
 const problems = required
   .filter((key) => !process.env[key]?.trim())
   .map((key) => `${key} belum diisi.`);
+if (process.env.DATABASE_URL) {
+  try {
+    const database = new URL(process.env.DATABASE_URL);
+    if (
+      database.hostname.endsWith(".pooler.supabase.com") &&
+      database.port !== "6543"
+    )
+      problems.push(
+        "DATABASE_URL runtime serverless harus memakai Transaction pooler port 6543; DIRECT_URL dipakai untuk migrasi.",
+      );
+  } catch {
+    problems.push("DATABASE_URL tidak valid.");
+  }
+}
 if (process.env.NEXT_PUBLIC_APP_MODE !== "live")
   problems.push("NEXT_PUBLIC_APP_MODE harus live.");
 try {

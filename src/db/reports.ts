@@ -25,7 +25,12 @@ export async function getFinancialReport(input: unknown) {
       left join public.categories c on c.id=t.category_id and c.family_id=${familyId}::uuid
       left join public.users u on u.id=t.user_id and u.family_id=${familyId}::uuid
       where t.family_id=${familyId}::uuid and t.transaction_date between ${start}::date and ${end}::date
-      order by t.transaction_date desc,t.created_at desc,t.id desc`);
+      order by t.transaction_date desc,t.created_at desc,t.id desc
+      limit 10001`);
+    if (rows.length > 10000)
+      throw new Error(
+        "Laporan terlalu besar. Pilih rentang tanggal yang lebih pendek (maksimal 10.000 transaksi).",
+      );
     return aggregateReport(
       String(family.name),
       start,

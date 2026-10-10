@@ -39,17 +39,33 @@ export async function snapshot(
     .from(s.savingGoals)
     .where(eq(s.savingGoals.familyId, f));
   const logs = await tx
-    .select()
+    .select({
+      id: s.auditLogs.id,
+      userId: s.auditLogs.userId,
+      action: s.auditLogs.action,
+      entityType: s.auditLogs.entityType,
+      entityId: s.auditLogs.entityId,
+      createdAt: s.auditLogs.createdAt,
+      beforeData: sql`case when ${s.auditLogs.beforeData} is null then null else jsonb_build_object('name',${s.auditLogs.beforeData}->>'name','description',${s.auditLogs.beforeData}->>'description') end`,
+      afterData: sql`case when ${s.auditLogs.afterData} is null then null else jsonb_build_object('name',${s.auditLogs.afterData}->>'name','description',${s.auditLogs.afterData}->>'description') end`,
+    })
     .from(s.auditLogs)
     .where(eq(s.auditLogs.familyId, f))
     .orderBy(sql`${s.auditLogs.createdAt} desc`)
     .limit(500);
   const balances = await tx.execute(
-    sql`select id,public.wallet_balance(id,${f}::uuid) as balance from public.wallets where family_id=${f}::uuid`,
+    sql`select w.id,coalesce(b.balance,0) as balance,sum(coalesce(b.balance,0)) over () as family_balance from public.wallets w
+      left join (
+        select wallet_id,sum(delta) as balance from (
+          select wallet_id,case when type='income' then amount else -amount end as delta
+          from public.transactions where family_id=${f}::uuid
+          union all
+          select to_wallet_id as wallet_id,amount as delta
+          from public.transactions where family_id=${f}::uuid and type='transfer'
+        ) ledger group by wallet_id
+      ) b on b.wallet_id=w.id where w.family_id=${f}::uuid`,
   );
-  const [aggregate] = await tx.execute(
-    sql`select public.family_balance(${f}::uuid) as balance`,
-  );
+  const aggregate = { balance: balances[0]?.family_balance || "0" };
   const labels: Record<string, string> = {
     transactions: "Transaksi",
     wallets: "Dompet",
@@ -123,10 +139,47 @@ export async function snapshot(
   };
 }
 export async function getWorkspace() {
-  const workspace = await withIdentity(async (tx, id) => ({
-    data: await snapshot(tx, id),
-    identity: id,
-  }));
+  const workspace = await withIdentity(
+    async (tx, id) => ({
+      data: await snapshot(tx, id),
+      identity: id,
+    }),
+    true,
+    { rateLimit: "workspace" },
+  );
+  return signWorkspaceReceipts(workspace);
+}
+
+export async function refreshWorkspaceData(knownRevision?: string) {
+  const workspace = await withIdentity(
+    async (tx, id) => {
+      const [latest] = await tx
+        .select({ id: s.auditLogs.id })
+        .from(s.auditLogs)
+        .where(eq(s.auditLogs.familyId, id.familyId))
+        .orderBy(desc(s.auditLogs.createdAt), desc(s.auditLogs.id))
+        .limit(1);
+      const revision = latest?.id || "empty";
+      // Revision is only a cache hint: identity and RLS are still verified on every request.
+      if (knownRevision === revision)
+        return { unchanged: true as const, revision };
+      return {
+        unchanged: false as const,
+        revision,
+        data: await snapshot(tx, id),
+        identity: id,
+      };
+    },
+    true,
+    { rateLimit: "workspace" },
+  );
+  if (workspace.unchanged) return workspace;
+  return signWorkspaceReceipts(workspace);
+}
+
+async function signWorkspaceReceipts<T extends { data: DemoData }>(
+  workspace: T,
+): Promise<T> {
   // Lepas koneksi database sebelum menunggu layanan Storage.
   const paths = [
     ...new Set(

@@ -59,7 +59,13 @@ export const users = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => ({ familyIdx: index("user_family_idx").on(t.familyId) }),
+  (t) => [
+    index("user_family_idx").on(t.familyId),
+    check(
+      "profile_payload_size",
+      sql`length(${t.name}) between 1 and 120 and (${t.avatarUrl} is null or length(${t.avatarUrl})<=400000)`,
+    ),
+  ],
 );
 
 // === WALLETS (semua dompet milik keluarga) ===
@@ -158,6 +164,26 @@ export const transactions = pgTable(
       t.transactionDate,
     ),
     walletIdx: index("tx_wallet_idx").on(t.walletId),
+    familyOrderIdx: index("tx_family_order_idx").on(
+      t.familyId,
+      t.transactionDate.desc(),
+      t.createdAt.desc(),
+      t.id.desc(),
+    ),
+    familyDestinationIdx: index("tx_family_destination_idx")
+      .on(t.familyId, t.toWalletId)
+      .where(sql`${t.toWalletId} is not null`),
+    categoryIdx: index("tx_category_idx")
+      .on(t.categoryId)
+      .where(sql`${t.categoryId} is not null`),
+    userIdx: index("tx_user_idx").on(t.userId),
+    receiptIdx: index("tx_receipt_idx")
+      .on(t.familyId, t.receiptUrl)
+      .where(sql`${t.receiptUrl} is not null`),
+    payloadSize: check(
+      "transaction_payload_size",
+      sql`(${t.description} is null or length(${t.description})<=2000) and (${t.receiptUrl} is null or length(${t.receiptUrl})<=300) and (${t.receiptOcrData} is null or octet_length(${t.receiptOcrData}::text)<=4096)`,
+    ),
   }),
 );
 
@@ -192,6 +218,8 @@ export const savingGoals = pgTable(
       .notNull(),
   },
   (t) => [
+    index("goals_wallet_idx").on(t.walletId),
+    index("goals_creator_idx").on(t.createdByUserId),
     uniqueIndex("goal_wallet_open_idx")
       .on(t.familyId, t.walletId)
       .where(sql`${t.status}<>'archived'`),
@@ -242,7 +270,12 @@ export const auditLogs = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => ({ familyIdx: index("audit_family_idx").on(t.familyId, t.createdAt) }),
+  (t) => ({
+    familyIdx: index("audit_family_idx").on(t.familyId, t.createdAt),
+    userIdx: index("audit_user_idx")
+      .on(t.userId)
+      .where(sql`${t.userId} is not null`),
+  }),
 );
 
 // === RELATIONS ===

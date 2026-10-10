@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   icons: { apple: "/ikon/apple-touch-icon.png" },
   metadataBase: new URL(siteUrl()),
   title: {
-    default: "DuitKita - Uang berdua, tercatat berdua",
+    default: "Aplikasi Keuangan Keluarga dan Pasangan - DuitKita",
     template: "%s - DuitKita",
   },
   description:

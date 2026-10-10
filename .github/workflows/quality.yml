@@ -1,0 +1,35 @@
+name: Pemeriksaan DuitKita
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_APP_MODE: demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod
+      - run: pnpm lint
+      - run: pnpm exec tsx scripts/test-database.mts
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm exec playwright install --with-deps chrome
+      - name: Pengujian browser dan unit
+        run: |
+          pnpm start > /tmp/duitkita-test-server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:3000/masuk > /dev/null; then break; fi
+            sleep 1
+          done
+          pnpm exec playwright test tests/rate-limit.spec.ts tests/runtime-url.spec.ts tests/workspace-feedback.spec.ts tests/workspace-intent.spec.ts tests/wallet-funds.spec.ts tests/wallet-goals.spec.ts tests/reports.spec.ts tests/pwa.spec.ts tests/theme.spec.ts

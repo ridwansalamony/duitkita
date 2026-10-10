@@ -95,3 +95,18 @@ test("penolakan Upstash menjadi 429", async () => {
       .catch((e) => ({ status: e.status })),
   ).toEqual({ status: 429 });
 });
+
+test("lonjakan mutasi dibatasi dan akun lain tidak ikut diblokir", async () => {
+  const service = await limiter({});
+  const results = await Promise.all(
+    Array.from({ length: 100 }, () =>
+      service
+        .enforceRateLimit("mutation", "budi")
+        .then(() => 200)
+        .catch((e) => e.status),
+    ),
+  );
+  expect(results.filter((status) => status === 200)).toHaveLength(30);
+  expect(results.filter((status) => status === 429)).toHaveLength(70);
+  expect(await service.enforceRateLimit("mutation", "sari")).toBeUndefined();
+});

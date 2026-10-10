@@ -6,6 +6,7 @@ import { withIdentity } from "@/db";
 import * as s from "@/db/schema";
 import { getWorkspace } from "@/db/queries";
 import { supabaseServer } from "@/lib/supabase/server";
+import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 const id = z.uuid(),
   amount = z.number().positive().max(9999999999999.99).multipleOf(0.01);
 const name = z.string().trim().min(1).max(120),
@@ -79,6 +80,7 @@ const operationSchema = z.object({
   value: z.unknown(),
 });
 function mutationError(error: unknown) {
+  if (error instanceof RateLimitError) return error.message;
   if (error instanceof z.ZodError)
     return "Isian belum sesuai. Periksa nominal, tanggal, dan kolom wajib.";
   const source = error as {
@@ -94,6 +96,7 @@ function mutationError(error: unknown) {
     return "Catatan sudah ada atau dompet telah terhubung ke target lain.";
   const message = source.cause?.message || source.message || "";
   const safe = [
+    "Terlalu banyak perubahan. Tunggu satu menit lalu coba kembali.",
     "Saldo dompet belum mencukupi",
     "Kategori Lainnya tetap diperlukan",
     "Jenis kategori yang terpakai tidak dapat diubah",
@@ -144,12 +147,20 @@ export async function mutate(input: unknown) {
                 )
               )
                 throw new Error("Lampiran tidak valid");
+              const directory = v.receiptPath.slice(
+                0,
+                v.receiptPath.lastIndexOf("/"),
+              );
+              const filename = v.receiptPath.slice(
+                v.receiptPath.lastIndexOf("/") + 1,
+              );
               const { data, error } = await (
                 await supabaseServer()
               ).storage
                 .from("receipts")
-                .download(v.receiptPath);
-              if (error || !data) throw new Error("Lampiran tidak tersedia");
+                .list(directory, { search: filename, limit: 1 });
+              if (error || !data?.some((file) => file.name === filename))
+                throw new Error("Lampiran tidak tersedia");
             }
             const record = {
               walletId: v.walletId,
@@ -340,6 +351,8 @@ export async function mutate(input: unknown) {
         }
         return null;
       },
+      true,
+      { rateLimit: "mutation" },
     );
     return { success: true as const, family };
   } catch (error) {
@@ -363,6 +376,7 @@ export async function realtimeToken() {
     data: { user },
   } = await c.auth.getUser();
   if (!user) return null;
+  await enforceRateLimit("realtime", user.id);
   const {
     data: { session },
   } = await c.auth.getSession();

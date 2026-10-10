@@ -189,3 +189,38 @@ test("event audit Realtime memperbarui target tanpa reload halaman", async ({
     "Target diperbarui pasangan",
   );
 });
+
+test("audit beruntun digabung dan revision yang tidak berubah mempertahankan data", async ({
+  page,
+}) => {
+  let requests = 0;
+  await page.route("**/api/ruang-keluarga", async (route) => {
+    requests++;
+    if (requests === 1) {
+      const result = (await page.evaluate(
+        () => window.harness.initial,
+      )) as object;
+      await route.fulfill({
+        json: { ...result, revision: "test-revision", unchanged: false },
+      });
+    } else {
+      expect(route.request().headers()["x-workspace-revision"]).toBe(
+        "test-revision",
+      );
+      await route.fulfill({
+        json: { success: true, unchanged: true, revision: "test-revision" },
+      });
+    }
+  });
+  await open(page);
+  await page.evaluate(() => {
+    for (let i = 0; i < 20; i++) window.harness.emit();
+  });
+  await expect.poll(() => requests).toBe(1);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect.poll(() => requests).toBe(2);
+  await expect(page.getByTestId("goals")).toContainText("Rumah");
+  await expect(
+    page.getByText("Data terbaru belum tersinkron.", { exact: false }),
+  ).toBeHidden();
+});

@@ -907,4 +907,155 @@ await assert.rejects(
 console.log(
   "Lulus: budget tersimpan dan terisolasi, struk hanya pengeluaran, transfer tanpa catatan, arsip baru ditolak, dompet target/arsip lama tidak dapat dipakai ulang.",
 );
+await db.exec(
+  readFileSync("supabase/migrations/0006_keamanan_dan_indeks.sql", "utf8"),
+);
+await asUser(extra, fresh, async () => {
+  await db.query("update public.users set avatar_url=$2 where id=$1", [
+    extra,
+    "data:image/png;base64,AAAA",
+  ]);
+  const log = await db.query<{
+    before_data: Record<string, unknown>;
+    after_data: Record<string, unknown>;
+  }>(
+    "select before_data,after_data from public.audit_logs where family_id=$1 and entity_id=$2 order by created_at desc limit 1",
+    [fresh, extra],
+  );
+  assert.equal(log.rows[0].after_data.avatar_url, undefined);
+  assert.equal(log.rows[0].before_data.avatar_url, undefined);
+  assert.equal(
+    await scalar("select avatar_url from public.users where id=$1", [extra]),
+    "data:image/png;base64,AAAA",
+  );
+  const sums = await db.query<{ wallet_id: string; balance: string }>(
+    `select wallet_id,sum(delta) as balance from (
+    select wallet_id,case when type='income' then amount else -amount end as delta from public.transactions where family_id=$1
+    union all select to_wallet_id,amount from public.transactions where family_id=$1 and type='transfer'
+  ) ledger group by wallet_id`,
+    [fresh],
+  );
+  for (const row of sums.rows)
+    assert.equal(
+      Number(row.balance),
+      Number(
+        await scalar("select public.wallet_balance($1,$2)", [
+          row.wallet_id,
+          fresh,
+        ]),
+      ),
+    );
+});
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query("update public.users set avatar_url=$2 where id=$1", [
+      extra,
+      "x".repeat(400001),
+    ]),
+  ),
+  /profile_payload_size/,
+);
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query(
+      "update public.transactions set description=$2 where family_id=$1 and type='income'",
+      [fresh, "x".repeat(2001)],
+    ),
+  ),
+  /transaction_payload_size/,
+);
+await asUser(other, foreign, async () => {
+  assert.equal(
+    await scalar("select count(*) from public.audit_logs where family_id=$1", [
+      fresh,
+    ]),
+    0,
+  );
+});
+console.log(
+  "Lulus: payload besar ditolak pada database, audit tidak menyalin avatar, saldo agregat cocok dengan ledger, isolasi audit tetap berlaku.",
+);
+const bulkWallet = await asUser(extra, fresh, () =>
+  scalar(
+    "insert into public.wallets(family_id,name) values($1,'Uji debit batch') returning id",
+    [fresh],
+  ),
+);
+await asUser(extra, fresh, () =>
+  db.query(
+    "insert into public.transactions(family_id,user_id,wallet_id,type,amount,transaction_date) values($1,$2,$3,'income',100,'2026-10-01')",
+    [fresh, extra, bulkWallet],
+  ),
+);
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query(
+      `insert into public.transactions(family_id,user_id,wallet_id,to_wallet_id,type,amount,transaction_date)
+  values($1,$2,$3,$4,'transfer',60,'2026-10-02'),($1,$2,$3,$4,'transfer',60,'2026-10-02')`,
+      [fresh, extra, bulkWallet, destination],
+    ),
+  ),
+  /Saldo dompet belum mencukupi/,
+);
+await asUser(extra, fresh, () =>
+  scalar("select public.wallet_balance($1,$2)", [bulkWallet, fresh]).then(
+    (balance) => assert.equal(Number(balance), 100),
+  ),
+);
+console.log(
+  "Lulus: dua debit dalam satu statement tidak dapat melewati saldo; seluruh batch rollback.",
+);
+await db.exec(
+  readFileSync("supabase/migrations/0007_batas_tulis_database.sql", "utf8"),
+);
+for (let i = 0; i < 60; i++)
+  await asUser(extra, fresh, () =>
+    db.query("update public.users set name='Uji batas database' where id=$1", [
+      extra,
+    ]),
+  );
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query("update public.users set name='Request ke-61' where id=$1", [
+      extra,
+    ]),
+  ),
+  /Terlalu banyak perubahan/,
+);
+await asUser(other, foreign, () =>
+  db.query(
+    "update public.users set name='Keluarga lain tetap bekerja' where id=$1",
+    [other],
+  ),
+);
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query("select * from duitkita_private.write_limits"),
+  ),
+  /permission denied/,
+);
+console.log(
+  "Lulus: jalur database membatasi request tulis, keluarga lain tidak terblokir, counter privat tidak dapat dibaca pengguna.",
+);
+const walletCount = await asUser(other, foreign, () =>
+  scalar("select count(*) from public.wallets where family_id=$1", [foreign]),
+);
+await assert.rejects(
+  asUser(other, foreign, () =>
+    db.query(
+      "insert into public.wallets(family_id,name) select $1,'Batch '||n from generate_series(1,61) n",
+      [foreign],
+    ),
+  ),
+  /Terlalu banyak perubahan/,
+);
+assert.equal(
+  await asUser(other, foreign, () =>
+    scalar("select count(*) from public.wallets where family_id=$1", [foreign]),
+  ),
+  walletCount,
+);
+console.log(
+  "Lulus: batch besar tidak melewati limiter database dan tidak meninggalkan baris parsial.",
+);
 await db.close();

@@ -12,8 +12,12 @@ const policies = {
   family: { limit: 10, seconds: 3600 },
   receipt: { limit: 20, seconds: 60 },
   report: { limit: 60, seconds: 60 },
+  mutation: { limit: 30, seconds: 60 },
+  workspace: { limit: 30, seconds: 60 },
+  realtime: { limit: 12, seconds: 60 },
 } as const;
-type Kind = keyof typeof policies;
+export type RateLimitKind = keyof typeof policies;
+type Kind = RateLimitKind;
 const buckets = new Map<string, { count: number; reset: number }>();
 const limiters = new Map<Kind, Ratelimit>();
 export class RateLimitError extends Error {

@@ -26,6 +26,25 @@ test.describe("HTTP production", () => {
     expect(await sitemap.text()).not.toContain("/transaksi");
     const robots = await request.get("/robots.txt");
     expect(await robots.text()).toContain("Disallow: /api/");
+    for (const path of ["/masuk", "/daftar", "/lupa-kata-sandi", "/atur-kata-sandi"]) {
+      expect(await robots.text()).not.toContain(`Disallow: ${path}`);
+      const authPage = await request.get(path);
+      expect(await authPage.text()).toContain('content="noindex, nofollow"');
+    }
+    for (const [path, title] of [
+      ["/", "Aplikasi Keuangan Keluarga dan Pasangan"],
+      ["/fitur", "Fitur Pengelolaan Keuangan Keluarga"],
+      ["/tentang", "Tentang DuitKita dan Keuangan Bersama"],
+      ["/kontak", "Kontak dan Bantuan"],
+    ]) {
+      const response = await request.get(path);
+      expect(response.ok()).toBe(true);
+      const html = await response.text();
+      expect(html).toContain(`<title>${title} - DuitKita</title>`);
+      expect(html).toContain('content="index, follow"');
+      expect(html).toContain('rel="canonical"');
+      expect(html).toContain('property="og:title"');
+    }
     const image = await request.get("/opengraph-image");
     expect(image.ok()).toBe(true);
     expect(image.headers()["content-type"]).toContain("image/png");

@@ -33,6 +33,8 @@ export function WorkspaceProvider({
     revision = useRef(0),
     refreshAgain = useRef(false),
     refreshController = useRef<AbortController | null>(null);
+  const serverRevision = useRef<string | undefined>(undefined);
+  const signedAt = useRef(0);
   const assign = useCallback((next: DemoData) => {
     current.current = next;
     if (mounted.current) setData(next);
@@ -53,6 +55,11 @@ export function WorkspaceProvider({
           const response = await fetch("/api/ruang-keluarga", {
             cache: "no-store",
             signal: controller.signal,
+            headers:
+              serverRevision.current &&
+              Date.now() - signedAt.current < 50 * 60000
+                ? { "X-Workspace-Revision": serverRevision.current }
+                : {},
           });
           const result = await response.json();
           if (!mounted.current || version !== revision.current || busy.current)
@@ -60,10 +67,14 @@ export function WorkspaceProvider({
           if (
             !response.ok ||
             !result.success ||
-            result.identity.familyId !== familyId
+            (!result.unchanged && result.identity.familyId !== familyId)
           )
             throw new Error("refresh");
-          assign(result.data);
+          if (result.revision) serverRevision.current = result.revision;
+          if (!result.unchanged) {
+            assign(result.data);
+            signedAt.current = Date.now();
+          }
           setSyncFailed(false);
         } catch {
           if (mounted.current && version === revision.current && !busy.current)
@@ -90,6 +101,8 @@ export function WorkspaceProvider({
       },
     );
     let stopped = false;
+    let realtimeHealthy = false;
+    let eventRefresh: ReturnType<typeof setTimeout> | undefined;
     async function connect() {
       const token = await realtimeToken();
       if (stopped || !token) return;
@@ -104,9 +117,14 @@ export function WorkspaceProvider({
             table: "audit_logs",
             filter: `family_id=eq.${familyId}`,
           },
-          () => void refresh(),
+          () => {
+            // Several audit records can belong to the same committed operation.
+            clearTimeout(eventRefresh);
+            eventRefresh = setTimeout(() => void refresh(), 300);
+          },
         )
         .subscribe((status) => {
+          realtimeHealthy = status === "SUBSCRIBED";
           if (status === "SUBSCRIBED") void refresh();
         });
     }
@@ -120,7 +138,17 @@ export function WorkspaceProvider({
     document.addEventListener("visibilitychange", onFocus);
     // Audit INSERT memicu refresh untuk create/update/delete semua entitas.
     // RLS audit tetap melindungi data antar keluarga; polling menjadi fallback koneksi Realtime.
-    const poll = setInterval(onFocus, 15000);
+    let lastPoll = Date.now();
+    const poll = setInterval(
+      () => {
+        const now = Date.now();
+        if (now - lastPoll >= (realtimeHealthy ? 60000 : 15000)) {
+          lastPoll = now;
+          onFocus();
+        }
+      },
+      15000 + Math.floor(Math.random() * 2000),
+    );
     const renew = setInterval(
       () =>
         void realtimeToken()
@@ -133,6 +161,7 @@ export function WorkspaceProvider({
     return () => {
       mounted.current = false;
       stopped = true;
+      clearTimeout(eventRefresh);
       refreshController.current?.abort();
       clearInterval(poll);
       clearInterval(renew);

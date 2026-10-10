@@ -3,22 +3,22 @@ import { appUrl } from "./app-url";
 export const siteUrl = appUrl;
 export const publicPages = {
   "/": {
-    title: "Uang berdua, tercatat berdua",
+    title: "Aplikasi Keuangan Keluarga dan Pasangan",
     description:
-      "DuitKita membantu pasangan mencatat keuangan bersama, mengatur budget, dan menabung untuk impian keluarga.",
+      "Kelola keuangan keluarga bersama pasangan dengan DuitKita. Catat pemasukan dan pengeluaran, pantau anggaran bulanan, dan capai target tabungan bersama.",
   },
   "/fitur": {
-    title: "Fitur",
+    title: "Fitur Pengelolaan Keuangan Keluarga",
     description:
-      "Catat transaksi, baca struk, pantau budget, dan wujudkan target tabungan bersama pasangan di DuitKita.",
+      "Jelajahi fitur DuitKita: dompet bersama, pencatatan transaksi, pemindaian struk, anggaran bulanan, laporan keuangan, dan target tabungan keluarga.",
   },
   "/tentang": {
-    title: "Tentang Kami",
+    title: "Tentang DuitKita dan Keuangan Bersama",
     description:
       "Kenali DuitKita, ruang keuangan bersama agar pasangan lebih mudah merencanakan masa depan keluarga.",
   },
   "/kontak": {
-    title: "Hubungi Kami",
+    title: "Kontak dan Bantuan",
     description:
       "Temukan bantuan dan sampaikan masukan untuk pengalaman mencatat keuangan bersama di DuitKita.",
   },
