@@ -425,21 +425,21 @@ export function GoalDetail({ id }: { id: string }) {
           </div>
         }
       />
-      <div className="grid items-start gap-6 xl:grid-cols-[1fr_1.3fr]">
-        <div className="space-y-6">
-          <section className="panel">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+        <div className="min-w-0 space-y-6">
+          <section className="panel min-w-0">
             <FeatureIcon name={goal.icon} className="size-16" color="#f59e0b" />
             <p className="mt-6 text-xs text-muted-foreground">
               Saldo {wallet?.name}
             </p>
             <CurrencyDisplay
               amount={amount}
-              className="mt-2 block text-4xl font-semibold"
+              className="mt-2 block whitespace-normal break-words text-3xl font-semibold sm:text-4xl"
             />
             <p className="mt-2 text-sm text-muted-foreground">
               dari {rupiah(goal.target)}
             </p>
-            <div className="mt-6 flex justify-between text-xs">
+            <div className="mt-6 flex flex-wrap justify-between gap-2 text-xs">
               <span>{pct}% tercapai</span>
               <span className="text-muted-foreground">
                 Sisa {rupiah(Math.max(0, goal.target - amount))}
@@ -469,7 +469,7 @@ export function GoalDetail({ id }: { id: string }) {
               </Button>
             </>
           </section>
-          <section className="panel">
+          <section className="panel min-w-0 break-words">
             <h2 className="flex items-center gap-2 text-sm font-bold">
               <Wallet size={16} />
               Dompet terhubung
@@ -488,7 +488,7 @@ export function GoalDetail({ id }: { id: string }) {
             </Button>
           </section>
         </div>
-        <section className="panel">
+        <section className="panel min-w-0 break-words">
           <h2 className="text-base font-bold">Riwayat dompet tabungan</h2>
           <p className="mt-2 text-xs text-muted-foreground">
             {history.length} transaksi · saldo bersama seluruh keluarga
@@ -517,7 +517,7 @@ export function GoalDetail({ id }: { id: string }) {
                       <CurrencyDisplay
                         amount={t.amount}
                         type={incoming ? "income" : "expense"}
-                        className="text-sm font-semibold"
+                        className="max-w-full whitespace-normal break-words text-sm font-semibold"
                       />
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">

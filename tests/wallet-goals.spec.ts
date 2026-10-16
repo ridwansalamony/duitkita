@@ -62,15 +62,49 @@ test("saldo target mengikuti transfer, perubahan dan hapus tanpa kontribusi manu
   await expect(balance).toContainText(/Rp\s?9\.750\.000/);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator("h1")).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth + 1,
-    ),
-  ).toBeTruthy();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    )
+    .toBeTruthy();
   await page.screenshot({
     path: "docs/screenshots/fase-2-target-dompet-mobile.png",
     fullPage: true,
   });
+});
+
+test("detail tabungan tetap muat pada layar sempit dan nama dompet panjang", async ({
+  page,
+}) => {
+  await page.goto("/tabungan/liburan-bali");
+  await expect(
+    page.getByRole("heading", { name: "Liburan ke Bali", exact: true }),
+  ).toBeVisible();
+  // Stress content sizing without changing stored family data.
+  await page
+    .locator("main section")
+    .nth(1)
+    .locator("p")
+    .first()
+    .evaluate((element) => {
+      element.textContent = "TabunganLiburanKeluargaBudiDanSariBersamaAnakAnak";
+    });
+  for (const width of [320, 360, 390, 768, 1440, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          viewport: innerWidth,
+          overflow: document.documentElement.scrollWidth - innerWidth,
+        })),
+      )
+      .toEqual({ viewport: width, overflow: 0 });
+    await expect(
+      page.getByRole("link", { name: "Transfer ke Tabungan", exact: true }),
+    ).toBeVisible();
+  }
 });
 
 test("target mewajibkan dompet unik dan kedua pengguna memakai dompet utama", async ({
