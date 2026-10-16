@@ -6,8 +6,6 @@ const required = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "DATABASE_URL",
   "DIRECT_URL",
-  "UPSTASH_REDIS_REST_URL",
-  "UPSTASH_REDIS_REST_TOKEN",
 ];
 const problems = required
   .filter((key) => !process.env[key]?.trim())
@@ -38,7 +36,7 @@ try {
 } catch {
   problems.push("NEXT_PUBLIC_APP_URL belum valid.");
 }
-for (const key of ["NEXT_PUBLIC_SUPABASE_URL", "UPSTASH_REDIS_REST_URL"]) {
+for (const key of ["NEXT_PUBLIC_SUPABASE_URL"]) {
   if (!process.env[key]) continue;
   try {
     if (new URL(process.env[key]).protocol !== "https:") throw new Error();

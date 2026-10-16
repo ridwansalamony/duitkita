@@ -1,8 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
-import { Redis } from "@upstash/redis";
-import { Ratelimit } from "@upstash/ratelimit";
 
 const policies = {
   login: { limit: 20, seconds: 900 },
@@ -19,7 +17,6 @@ const policies = {
 export type RateLimitKind = keyof typeof policies;
 type Kind = RateLimitKind;
 const buckets = new Map<string, { count: number; reset: number }>();
-const limiters = new Map<Kind, Ratelimit>();
 export class RateLimitError extends Error {
   constructor(
     public status = 429,
@@ -31,15 +28,6 @@ export class RateLimitError extends Error {
         : "Layanan sementara belum tersedia. Coba beberapa saat lagi.",
     );
   }
-}
-function requiresDistributedLimit() {
-  const hostname = new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  ).hostname;
-  return (
-    process.env.VERCEL === "1" ||
-    !["localhost", "127.0.0.1", "[::1]"].includes(hostname)
-  );
 }
 export async function enforceRateLimit(kind: Kind, identity?: string) {
   const h = await headers();
@@ -53,36 +41,7 @@ export async function enforceRateLimit(kind: Kind, identity?: string) {
     "local-or-unidentified";
   const key = createHash("sha256").update(source).digest("hex");
   const { limit, seconds } = policies[kind];
-  const url = process.env.UPSTASH_REDIS_REST_URL,
-    token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (url && token) {
-    let limiter = limiters.get(kind);
-    if (!limiter) {
-      limiter = new Ratelimit({
-        redis: new Redis({ url, token }),
-        limiter: Ratelimit.slidingWindow(limit, `${seconds} s`),
-        prefix: `duitkita:${kind}`,
-        analytics: false,
-        timeout: 2000,
-      });
-      limiters.set(kind, limiter);
-    }
-    try {
-      const result = await limiter.limit(key);
-      await result.pending;
-      if (result.reason === "timeout") throw new RateLimitError(503);
-      if (!result.success)
-        throw new RateLimitError(
-          429,
-          Math.max(1, Math.ceil((result.reset - Date.now()) / 1000)),
-        );
-      return;
-    } catch (error) {
-      throw error instanceof RateLimitError ? error : new RateLimitError(503);
-    }
-  }
-  if (requiresDistributedLimit()) throw new RateLimitError(503);
-  // Local development only; never claim this is shared across production instances.
+  // Best-effort per-instance limit; counters reset on restart and are not shared.
   const now = Date.now();
   for (const [id, bucket] of buckets)
     if (bucket.reset <= now) buckets.delete(id);

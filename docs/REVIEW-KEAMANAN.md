@@ -3,7 +3,7 @@
 ## Perubahan
 
 - Next.js 15.5.27 dan source-map-js >=1.2.2 memperbaiki advisory yang ditemukan audit dependency.
-- Mutasi maksimal 30 request/menit per akun, penyegaran workspace 30/menit, token Realtime 12/menit. Upstash berbagi pembatasan antar instance; production menolak request ketika limiter tidak tersedia. Pembatasan dilakukan setelah verifikasi akun dan sebelum koneksi database diambil.
+- Mutasi maksimal 30 request/menit per akun, penyegaran workspace 30/menit, token Realtime 12/menit. Pembatas memori berlaku per instance dan ter-reset saat restart. Upstash tidak diperlukan; batas tulis database tetap berlaku lintas instance. Pembatasan dilakukan setelah verifikasi akun dan sebelum koneksi database diambil.
 - Runtime shared Supabase pooler port 5432 diarahkan ke transaction mode 6543. Pool global tetap maksimal dua koneksi per proses, prepared statement dinonaktifkan. DIRECT_URL untuk migrasi tetap terpisah.
 - Setiap transaksi aplikasi memakai statement timeout 10 detik, lock timeout 3 detik, idle transaction timeout 15 detik.
 - Saldo seluruh dompet dihitung bersama melalui agregasi SQL, termasuk debit/kredit transfer. Saldo keluarga dijumlahkan di PostgreSQL dengan numeric.
@@ -27,7 +27,7 @@ Tes PostgreSQL lokal melalui PGlite mencakup isolasi dua keluarga, JWT keluarga 
 
 ## Batas kapasitas yang masih perlu diukur
 
-Tidak ada jaminan bebas gangguan atau angka pengguna maksimum tanpa pengujian staging dan ukuran paket Supabase/Vercel/Upstash. Rate limit per akun tidak menghentikan serangan dari banyak akun/IP; aktifkan proteksi jaringan/WAF dan pantau CPU, koneksi, latensi, 429/503, serta egress.
+Tidak ada jaminan bebas gangguan atau angka pengguna maksimum tanpa pengujian staging dan ukuran paket Supabase/Vercel. Rate limit per akun tidak menghentikan serangan dari banyak akun/IP; aktifkan proteksi jaringan/WAF dan pantau CPU, koneksi, latensi, 429/503, serta egress.
 
 Snapshot masih memuat seluruh transaksi keluarga ketika data berubah. Untuk keluarga dengan riwayat sangat panjang, tahap skala berikutnya membutuhkan pagination transaksi dari server serta agregasi dashboard/budget dari server. Jangan membatasi daftar diam-diam karena dapat mengubah saldo dan laporan di UI.
 

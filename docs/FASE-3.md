@@ -1,3 +1,5 @@
+> Pembaruan: aplikasi tidak lagi memakai Upstash. Catatan pengujian Upstash di bawah adalah riwayat implementasi sebelumnya.
+
 # Fase 3 — Laporan dan persiapan rilis
 
 Status: implementasi laporan dan persiapan production tersedia. Deployment Vercel dan pengujian akun production belum selesai.
@@ -7,7 +9,7 @@ Status: implementasi laporan dan persiapan production tersedia. Deployment Verce
 - `/laporan`: filter harian, mingguan, bulanan, dan tanggal kustom; ringkasan kategori, anggota, dompet, serta tren. Endpoint `/api/laporan` memverifikasi sesi, mengambil identitas keluarga dari server, dan memfilter setiap join dengan keluarga tersebut. Agregasi dilakukan di server dari transaksi periode yang dipilih; transfer tetap ada di rincian, tetapi tidak menambah arus kas.
 - Ekspor PDF dengan nama keluarga, periode, grafik, kategori, rincian, dan nomor halaman. Font Noto Sans lokal berlisensi OFL. Excel berisi Transaksi, Summary Kategori, Summary Anggota, dan Ringkasan; nominal tetap berupa angka, teks pengguna tidak dijadikan formula.
 - Metadata publik, gambar Open Graph, sitemap empat halaman publik, robots, serta JSON-LD. Halaman akun/keluarga tidak diindeks.
-- Upstash membatasi login, pendaftaran, pemulihan sandi, pengaturan keluarga, unggah struk, dan laporan. Jika Redis tidak tersedia di production, request diblokir sementara. Pembatas memori hanya untuk localhost tanpa Upstash.
+- Pembatas memori membatasi request per instance, termasuk production. Upstash sudah dihapus untuk pemakaian keluarga; tidak ada jaminan batas global di lapisan aplikasi. Batas tulis database tetap aktif.
 - CSP dan header keamanan. Analytics dan Speed Insights hanya mengukur empat halaman publik; URL query dan fragment dibuang. Aktivasi layanan tetap dilakukan di dashboard Vercel.
 - `vercel.json`: region `sin1`, Next.js, pnpm frozen lockfile. Node 24 dan pnpm 11.19.0 sesuai runtime lokal. PostCSS dipatok melalui override versi perbaikan.
 
@@ -33,8 +35,8 @@ Hasil akhir regresi: **44 tes demo/unit/OCR lulus**, enam tes khusus live sengaj
 
 1. Masuk ke https://vercel.com/new dengan akun tujuan. Import repository `ridwansalamony/duitkita`, beri nama proyek `duitkita`, pilih Next.js dan root `./`.
 2. Masukkan variabel dari `.env.local` ke Environment Variables Vercel secara langsung; jangan commit berkas tersebut. Gunakan `NEXT_PUBLIC_APP_MODE=live`. Ganti `NEXT_PUBLIC_APP_URL` dengan domain HTTPS yang benar-benar diberikan Vercel, bukan localhost. Nama proyek tidak menjamin domain `duitkita.vercel.app` tersedia.
-3. Isi URL/key Supabase, `DATABASE_URL`, bucket `receipts`, dan dua variabel Upstash. `DIRECT_URL` untuk migrasi administratif; aplikasi runtime memakai `DATABASE_URL`. Gunakan transaction pooler Supabase port 6543 untuk runtime serverless jika tersedia, `prepare:false` sudah disiapkan. Jangan mengganti password atau hostname dengan tebakan; ambil URL dari menu Connect Supabase.
-4. `SUPABASE_SERVICE_ROLE_KEY` hanya untuk administrasi server. Jangan pernah menambahkan prefiks `NEXT_PUBLIC_` pada database URL, service-role key, atau token Upstash.
+3. Isi URL/key Supabase, `DATABASE_URL`, bucket `receipts`. `DIRECT_URL` untuk migrasi administratif; aplikasi runtime memakai `DATABASE_URL`. Gunakan transaction pooler Supabase port 6543 untuk runtime serverless jika tersedia, `prepare:false` sudah disiapkan. Jangan mengganti password atau hostname dengan tebakan; ambil URL dari menu Connect Supabase.
+4. `SUPABASE_SERVICE_ROLE_KEY` hanya untuk administrasi server. Jangan pernah menambahkan prefiks `NEXT_PUBLIC_` pada database URL, service-role key.
 5. Deploy, lalu di Supabase Auth atur Site URL dan allowlist redirect ke domain production serta `/autentikasi/konfirmasi`. Periksa Auth Hook dan bucket privat sesuai Fase 2. Aktifkan Analytics dan Speed Insights di Vercel bila diperlukan.
 6. Jika domain baru diketahui setelah deploy pertama, perbarui `NEXT_PUBLIC_APP_URL` dan redeploy agar metadata serta tautan email memakai domain benar.
 7. Jalankan pemeriksaan akun, CRUD, OCR, laporan, audit, dan isolasi dua keluarga pada URL final. Jangan memakai akun atau data keuangan nyata untuk fixture pengujian otomatis.

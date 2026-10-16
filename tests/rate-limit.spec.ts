@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import { runInNewContext } from "node:vm";
 
-async function limiter(env: Record<string, string>, result?: object) {
+async function limiter(env: Record<string, string>) {
   const bundle = await build({
     entryPoints: ["src/lib/security/rate-limit.ts"],
     bundle: true,
@@ -16,8 +16,7 @@ async function limiter(env: Record<string, string>, result?: object) {
         setup(b) {
           b.onResolve(
             {
-              filter:
-                /^(server-only|next\/headers|@upstash\/redis|@upstash\/ratelimit)$/,
+              filter: /^(server-only|next\/headers)$/,
             },
             (a) => ({ path: a.path, namespace: "stub" }),
           );
@@ -25,11 +24,7 @@ async function limiter(env: Record<string, string>, result?: object) {
             contents:
               a.path === "server-only"
                 ? ""
-                : a.path === "next/headers"
-                  ? "export async function headers(){return new Map()}"
-                  : a.path === "@upstash/redis"
-                    ? "export class Redis {}"
-                    : `export class Ratelimit {static slidingWindow(){} async limit(){return ${JSON.stringify(result ?? { success: true, reset: 0 })}}}`,
+                : "export async function headers(){return new Map()}",
           }));
         },
       },
@@ -60,42 +55,14 @@ test("rate limit lokal menolak percobaan keenam dan memisahkan identitas", async
   ).toEqual({ status: 429 });
   expect(await service.enforceRateLimit("register", "sari")).toBeUndefined();
 });
-test("production menolak request jika Upstash belum tersedia atau timeout", async () => {
-  const missing = await limiter({ VERCEL: "1" });
+test("production tanpa Upstash tetap berjalan dan membatasi request", async () => {
+  const service = await limiter({ VERCEL: "1" });
+  for (let i = 0; i < 20; i++) await service.enforceRateLimit("login");
   expect(
-    await missing
-      .enforceRateLimit("login")
-      .catch((e) => ({ status: e.status })),
-  ).toEqual({ status: 503 });
-  const timeout = await limiter(
-    {
-      VERCEL: "1",
-      UPSTASH_REDIS_REST_URL: "https://test.invalid",
-      UPSTASH_REDIS_REST_TOKEN: "test",
-    },
-    { success: true, reason: "timeout", reset: 0 },
-  );
-  expect(
-    await timeout
-      .enforceRateLimit("login")
-      .catch((e) => ({ status: e.status })),
-  ).toEqual({ status: 503 });
+    await service.enforceRateLimit("login").catch((error) => error.status),
+  ).toBe(429);
+  expect(await service.enforceRateLimit("mutation", "sari")).toBeUndefined();
 });
-test("penolakan Upstash menjadi 429", async () => {
-  const service = await limiter(
-    {
-      UPSTASH_REDIS_REST_URL: "https://test.invalid",
-      UPSTASH_REDIS_REST_TOKEN: "test",
-    },
-    { success: false, reset: Date.now() + 60000 },
-  );
-  expect(
-    await service
-      .enforceRateLimit("report", "budi")
-      .catch((e) => ({ status: e.status })),
-  ).toEqual({ status: 429 });
-});
-
 test("lonjakan mutasi dibatasi dan akun lain tidak ikut diblokir", async () => {
   const service = await limiter({});
   const results = await Promise.all(
