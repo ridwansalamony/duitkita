@@ -1,4 +1,5 @@
 "use client";
+import { supabasePublicKey } from "@/lib/supabase/public-key";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ export function WorkspaceProvider({
 }) {
   const [data, setData] = useState(initial),
     [syncFailed, setSyncFailed] = useState(false);
+  const [accessLost, setAccessLost] = useState(false);
   const current = useRef(initial),
     busy = useRef(false),
     mounted = useRef(true),
@@ -61,15 +63,28 @@ export function WorkspaceProvider({
                 ? { "X-Workspace-Revision": serverRevision.current }
                 : {},
           });
+          if (response.status === 401 || response.status === 403) {
+            if (mounted.current) {
+              setAccessLost(true);
+              window.location.replace(
+                response.status === 401 ? "/masuk" : "/pengaturan-awal",
+              );
+            }
+            return;
+          }
           const result = await response.json();
           if (!mounted.current || version !== revision.current || busy.current)
             continue;
-          if (
-            !response.ok ||
-            !result.success ||
-            (!result.unchanged && result.identity.familyId !== familyId)
-          )
+          if (!response.ok || !result.success || !result.identity)
             throw new Error("refresh");
+          if (
+            result.identity.familyId !== familyId ||
+            result.identity.userId !== userId
+          ) {
+            setAccessLost(true);
+            window.location.replace("/dashboard");
+            return;
+          }
           if (result.revision) serverRevision.current = result.revision;
           if (!result.unchanged) {
             assign(result.data);
@@ -86,12 +101,12 @@ export function WorkspaceProvider({
     } finally {
       refreshing.current = false;
     }
-  }, [assign, familyId]);
+  }, [assign, familyId, userId]);
   useEffect(() => {
     mounted.current = true;
     const client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabasePublicKey()!,
       {
         auth: {
           persistSession: false,
@@ -216,6 +231,12 @@ export function WorkspaceProvider({
     }
   };
   const user = data.users.find((u) => u.id === userId)!;
+  if (accessLost)
+    return (
+      <p role="status" className="p-6 text-sm">
+        Sesi berubah. Memuat ulang ruang keluarga…
+      </p>
+    );
   return (
     <Context.Provider
       value={{

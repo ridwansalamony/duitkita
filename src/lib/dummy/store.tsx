@@ -147,11 +147,12 @@ export function visibleTransactions(
     )
     .sort(newestTransactionFirst);
 }
+const transactionIdOrder = new Intl.Collator("en", { numeric: true });
 export function newestTransactionFirst(a: Transaction, b: Transaction) {
   return (
     b.date.localeCompare(a.date) ||
     (b.createdAt ?? "").localeCompare(a.createdAt ?? "") ||
-    b.id.localeCompare(a.id, "en", { numeric: true })
+    transactionIdOrder.compare(b.id, a.id)
   );
 }
 export function walletBalance(
@@ -177,6 +178,28 @@ export function walletBalance(
       0,
     );
 }
+function familyWalletBalances(data: DemoData, familyId: string) {
+  const totals = new Map(
+    data.wallets.filter((w) => w.familyId === familyId).map((w) => [w.id, 0]),
+  );
+  for (const t of data.transactions) {
+    if (t.familyId !== familyId) continue;
+    const cents = Math.round(t.amount * 100);
+    if (totals.has(t.walletId))
+      totals.set(
+        t.walletId,
+        totals.get(t.walletId)! + (t.type === "income" ? cents : -cents),
+      );
+    if (t.type === "transfer" && t.toWalletId && totals.has(t.toWalletId))
+      totals.set(t.toWalletId, totals.get(t.toWalletId)! + cents);
+  }
+  return Object.fromEntries(
+    [...totals].map(([id, cents]) => [
+      id,
+      data.walletBalances?.[id] ?? cents / 100,
+    ]),
+  );
+}
 export function goalAmount(data: DemoData, familyId: string, goalId: string) {
   const goal = data.goals.find(
     (g) => g.id === goalId && g.familyId === familyId,
@@ -199,11 +222,21 @@ export function primaryWallet(data: DemoData, familyId: string) {
 }
 
 export function normalizeGoals(data: DemoData): DemoData {
+  const balances = new Map<string, Record<string, number>>();
+  for (const g of data.goals) {
+    if (!balances.has(g.familyId))
+      balances.set(g.familyId, familyWalletBalances(data, g.familyId));
+  }
   return {
     ...data,
     goals: data.goals.map((g) => ({
       ...g,
-      status: goalStatus(data, g.familyId, g),
+      status:
+        g.status === "archived"
+          ? "archived"
+          : (balances.get(g.familyId)?.[g.walletId] ?? 0) >= g.target
+            ? "achieved"
+            : "active",
     })),
   };
 }
@@ -213,11 +246,8 @@ export function validateTransactionFunds(
   after: DemoData,
   familyId: string,
 ) {
-  const balances = Object.fromEntries(
-    before.wallets
-      .filter((w) => w.familyId === familyId)
-      .map((w) => [w.id, walletBalance(before, familyId, w.id)]),
-  );
+  if (before.transactions === after.transactions) return true;
+  const balances = familyWalletBalances(before, familyId);
   const previous = new Map(
     before.transactions
       .filter((t) => t.familyId === familyId)
@@ -228,10 +258,33 @@ export function validateTransactionFunds(
       .filter((t) => t.familyId === familyId)
       .map((t) => [t.id, t]),
   );
+  const working = { ...balances };
   for (const id of new Set([...previous.keys(), ...proposed.keys()])) {
     const old = previous.get(id),
       next = proposed.get(id);
-    if (old !== next && insufficientWallet(balances, old, next)) return false;
+    if (old === next) continue;
+    if (insufficientWallet(working, old, next)) return false;
+    // Reserve each accepted delta so a batch cannot spend the same balance twice.
+    for (const [transaction, direction] of [
+      [old, -1],
+      [next, 1],
+    ] as const) {
+      if (!transaction) continue;
+      const adjust = (walletId: string, delta: number) => {
+        if (walletId in working)
+          working[walletId] =
+            (Math.round(working[walletId] * 100) + Math.round(delta * 100)) /
+            100;
+      };
+      adjust(
+        transaction.walletId,
+        direction *
+          transaction.amount *
+          (transaction.type === "income" ? 1 : -1),
+      );
+      if (transaction.type === "transfer" && transaction.toWalletId)
+        adjust(transaction.toWalletId, direction * transaction.amount);
+    }
   }
   return true;
 }

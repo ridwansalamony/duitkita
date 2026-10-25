@@ -57,6 +57,13 @@
       "when": 1790791899621,
       "tag": "0007_batas_tulis_database",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790791899622,
+      "tag": "0008_nominal_finite",
+      "breakpoints": true
     }
   ]
 }

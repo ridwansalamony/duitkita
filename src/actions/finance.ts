@@ -4,7 +4,6 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { withIdentity } from "@/db";
 import * as s from "@/db/schema";
-import { getWorkspace } from "@/db/queries";
 import { supabaseServer } from "@/lib/supabase/server";
 import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 const id = z.uuid(),
@@ -116,6 +115,12 @@ function mutationError(error: unknown) {
 export async function mutate(input: unknown) {
   try {
     const { entity, action, value } = operationSchema.parse(input);
+    const transaction =
+      entity === "transactions" && action !== "delete"
+        ? txSchema.parse(value)
+        : undefined;
+    const receiptPath =
+      transaction?.type === "expense" ? transaction.receiptPath : undefined;
 
     const family = await withIdentity(
       async (tx, { familyId: f, userId: u, role }) => {
@@ -135,7 +140,7 @@ export async function mutate(input: unknown) {
               )
               .returning({ id: s.transactions.id });
           else {
-            const v = txSchema.parse(value);
+            const v = transaction!;
             if (v.type !== "expense") {
               v.receiptPath = undefined;
               v.receiptOcrData = undefined;
@@ -147,20 +152,6 @@ export async function mutate(input: unknown) {
                 )
               )
                 throw new Error("Lampiran tidak valid");
-              const directory = v.receiptPath.slice(
-                0,
-                v.receiptPath.lastIndexOf("/"),
-              );
-              const filename = v.receiptPath.slice(
-                v.receiptPath.lastIndexOf("/") + 1,
-              );
-              const { data, error } = await (
-                await supabaseServer()
-              ).storage
-                .from("receipts")
-                .list(directory, { search: filename, limit: 1 });
-              if (error || !data?.some((file) => file.name === filename))
-                throw new Error("Lampiran tidak tersedia");
             }
             const record = {
               walletId: v.walletId,
@@ -352,22 +343,37 @@ export async function mutate(input: unknown) {
         return null;
       },
       true,
-      { rateLimit: "mutation" },
+      {
+        rateLimit: "mutation",
+        beforeTransaction: receiptPath
+          ? async () => {
+              // Storage RLS verifies the uploader's family before listing. The exact
+              // current family is checked again inside the transaction and by SQL.
+              if (
+                !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\/[0-9a-f-]+\.(jpg|png)$/.test(
+                  receiptPath,
+                )
+              )
+                throw new Error("Lampiran tidak valid");
+              const split = receiptPath.lastIndexOf("/");
+              const filename = receiptPath.slice(split + 1);
+              const { data, error } = await (
+                await supabaseServer()
+              ).storage
+                .from("receipts")
+                .list(receiptPath.slice(0, split), {
+                  search: filename,
+                  limit: 1,
+                });
+              if (error || !data?.some((file) => file.name === filename))
+                throw new Error("Lampiran tidak tersedia");
+            }
+          : undefined,
+      },
     );
     return { success: true as const, family };
   } catch (error) {
     return { success: false as const, error: mutationError(error) };
-  }
-}
-export async function refreshWorkspace() {
-  try {
-    return { success: true as const, ...(await getWorkspace()) };
-  } catch {
-    return {
-      success: false as const,
-      error:
-        "Ruang keluarga tidak dapat dimuat. Masuk kembali jika keanggotaan berubah.",
-    };
   }
 }
 export async function realtimeToken() {
@@ -381,40 +387,4 @@ export async function realtimeToken() {
     data: { session },
   } = await c.auth.getSession();
   return session?.access_token || null;
-}
-export async function createTransaction(value: unknown) {
-  return mutate({ entity: "transactions", action: "create", value });
-}
-export async function updateTransaction(value: unknown) {
-  return mutate({ entity: "transactions", action: "update", value });
-}
-export async function deleteTransaction(value: unknown) {
-  return mutate({ entity: "transactions", action: "delete", value });
-}
-export async function createWallet(value: unknown) {
-  return mutate({ entity: "wallets", action: "create", value });
-}
-export async function updateWallet(value: unknown) {
-  return mutate({ entity: "wallets", action: "update", value });
-}
-export async function deleteWallet(value: unknown) {
-  return mutate({ entity: "wallets", action: "delete", value });
-}
-export async function createCategory(value: unknown) {
-  return mutate({ entity: "categories", action: "create", value });
-}
-export async function updateCategory(value: unknown) {
-  return mutate({ entity: "categories", action: "update", value });
-}
-export async function deleteCategory(value: unknown) {
-  return mutate({ entity: "categories", action: "delete", value });
-}
-export async function createGoal(value: unknown) {
-  return mutate({ entity: "goals", action: "create", value });
-}
-export async function updateGoal(value: unknown) {
-  return mutate({ entity: "goals", action: "update", value });
-}
-export async function deleteGoal(value: unknown) {
-  return mutate({ entity: "goals", action: "delete", value });
 }

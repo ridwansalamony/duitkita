@@ -101,7 +101,9 @@ test("sukses mengikuti commit, refresh lambat tidak menahan tombol atau mutasi b
     });
     await page
       .getByRole("dialog")
-      .screenshot({ path: "docs/screenshots/fase-2-proses-simpan.png" });
+      .screenshot({
+        path: "test-results/screenshots/fase-2-proses-simpan.png",
+      });
   }
   // Pengiriman ulang lewat Enter/requestSubmit juga dicegah sebelum render berikutnya.
   await page
@@ -208,7 +210,16 @@ test("audit beruntun digabung dan revision yang tidak berubah mempertahankan dat
         "test-revision",
       );
       await route.fulfill({
-        json: { success: true, unchanged: true, revision: "test-revision" },
+        json: {
+          success: true,
+          unchanged: true,
+          revision: "test-revision",
+          identity: (
+            (await page.evaluate(() => window.harness.initial)) as {
+              identity: object;
+            }
+          ).identity,
+        },
       });
     }
   });
@@ -223,4 +234,56 @@ test("audit beruntun digabung dan revision yang tidak berubah mempertahankan dat
   await expect(
     page.getByText("Data terbaru belum tersinkron.", { exact: false }),
   ).toBeHidden();
+});
+
+for (const [status, destination] of [
+  [401, "/masuk"],
+  [403, "/pengaturan-awal"],
+] as const) {
+  test(`refresh ${status} membersihkan UI keluarga sebelum berpindah`, async ({
+    page,
+  }) => {
+    await page.route(`https://test.local${destination}`, (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<main>Sesi berubah</main>",
+      }),
+    );
+    await page.route("**/api/ruang-keluarga", (route) =>
+      route.fulfill({ status, json: { success: false } }),
+    );
+    await open(page);
+    await expect(page.getByTestId("goals")).toBeVisible();
+    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect(page).toHaveURL(`https://test.local${destination}`);
+    await expect(page.getByTestId("goals")).toHaveCount(0);
+  });
+}
+
+test("pergantian akun terdeteksi sekalipun revision data tidak berubah", async ({
+  page,
+}) => {
+  await page.route("https://test.local/dashboard", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<main>Muat ulang identitas</main>",
+    }),
+  );
+  await page.route("**/api/ruang-keluarga", async (route) => {
+    const result = (await page.evaluate(() => window.harness.initial)) as {
+      identity: { familyId: string };
+    };
+    await route.fulfill({
+      json: {
+        success: true,
+        unchanged: true,
+        revision: "sama",
+        identity: { ...result.identity, userId: "sari" },
+      },
+    });
+  });
+  await open(page);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page).toHaveURL("https://test.local/dashboard");
+  await expect(page.getByTestId("goals")).toHaveCount(0);
 });

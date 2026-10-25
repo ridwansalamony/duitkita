@@ -27,7 +27,7 @@ test("mode live melindungi halaman keluarga dan tidak menawarkan pergantian akun
   }
   await expect(page.getByText("Langsung jelajahi demo")).toHaveCount(0);
   await page.screenshot({
-    path: "docs/screenshots/fase-2-masuk.png",
+    path: "test-results/screenshots/fase-2-masuk.png",
     fullPage: true,
   });
 });

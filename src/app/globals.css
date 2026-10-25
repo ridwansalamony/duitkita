@@ -164,3 +164,31 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Public marketing surfaces: preserve brand tokens and keep app UI unchanged. */
+.public-site .gradient-button {
+  background-image: none;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.public-site a[data-slot="button"] { transition-property: transform, background-color, color, box-shadow; }
+.public-site a[data-slot="button"]:active { transform: scale(.98); }
+.public-site .product-screenshot { aspect-ratio: 4 / 3; }
+.public-site .product-screenshot img { object-fit: contain; }
+.public-site input::placeholder, .public-site textarea::placeholder { color: var(--muted-foreground); opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .public-site a[data-slot="button"]:hover, .public-site a[data-slot="button"]:active { transform: none; }
+}
+
+/* Public neutrals only; application tokens and brand accent remain unchanged. */
+.public-site {
+  --background: hsl(240 20% 99%);
+  --card: hsl(240 25% 98%);
+  --popover: hsl(240 25% 98%);
+  background-color: var(--background);
+}
+.dark .public-site {
+  --background: hsl(258 20% 12%);
+  --card: hsl(258 18% 16%);
+  --popover: hsl(258 18% 16%);
+}

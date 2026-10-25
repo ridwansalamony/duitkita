@@ -26,9 +26,12 @@ export async function GET(request: Request) {
     const anonymous =
       error instanceof Error &&
       error.message === "Sesi berakhir. Silakan masuk kembali.";
+    const noFamily =
+      error instanceof Error &&
+      error.message === "Selesaikan pengaturan keluarga terlebih dahulu.";
     return Response.json(
       { success: false, error: "Data keluarga belum dapat disegarkan." },
-      { status: anonymous ? 401 : 503, headers },
+      { status: anonymous ? 401 : noFamily ? 403 : 503, headers },
     );
   }
 }

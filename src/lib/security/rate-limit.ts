@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
+import { trustedRequestIp } from "./request-ip";
 
 const policies = {
   login: { limit: 20, seconds: 900 },
@@ -17,6 +18,7 @@ const policies = {
 export type RateLimitKind = keyof typeof policies;
 type Kind = RateLimitKind;
 const buckets = new Map<string, { count: number; reset: number }>();
+let nextCleanup = 0;
 export class RateLimitError extends Error {
   constructor(
     public status = 429,
@@ -33,21 +35,24 @@ export async function enforceRateLimit(kind: Kind, identity?: string) {
   const h = await headers();
   // Vercel overwrites this header. Other deployments use one shared bucket unless
   // an authenticated identity is provided; untrusted forwarded headers are ignored.
-  const source =
-    identity ||
-    (process.env.VERCEL === "1"
-      ? h.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()
-      : null) ||
-    "local-or-unidentified";
+  const source = identity || trustedRequestIp(h) || "local-or-unidentified";
   const key = createHash("sha256").update(source).digest("hex");
   const { limit, seconds } = policies[kind];
   // Best-effort per-instance limit; counters reset on restart and are not shared.
   const now = Date.now();
-  for (const [id, bucket] of buckets)
-    if (bucket.reset <= now) buckets.delete(id);
+  // Bounded cleanup once a minute; do not scan every account on each request.
+  if (now >= nextCleanup || buckets.size >= 10000) {
+    for (const [id, bucket] of buckets)
+      if (bucket.reset <= now) buckets.delete(id);
+    nextCleanup = now + 60000;
+  }
   const id = `${kind}:${key}`;
-  const bucket = buckets.get(id) ?? { count: 0, reset: now + seconds * 1000 };
-  if (bucket.count >= limit || buckets.size >= 10000)
+  const existing = buckets.get(id);
+  const bucket =
+    existing && existing.reset > now
+      ? existing
+      : { count: 0, reset: now + seconds * 1000 };
+  if (bucket.count >= limit || (!existing && buckets.size >= 10000))
     throw new RateLimitError(
       429,
       Math.max(1, Math.ceil((bucket.reset - now) / 1000)),

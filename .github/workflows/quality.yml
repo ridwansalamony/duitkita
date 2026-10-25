@@ -11,28 +11,29 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_PUBLIC_APP_MODE: demo
+      E2E_OCR: "1"
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --prod
-      - run: pnpm lint
-      - run: pnpm exec tsx scripts/test-database.mts
-      - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm exec playwright install --with-deps chrome
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm run lint
+      - run: npx --no-install drizzle-kit check
+      - run: npx --no-install tsx scripts/test-database.mts
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npx --no-install playwright install --with-deps chrome
       - name: Pengujian browser dan unit
         run: |
-          pnpm start > /tmp/duitkita-test-server.log 2>&1 &
+          npm start > /tmp/duitkita-test-server.log 2>&1 &
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://localhost:3000/masuk > /dev/null; then break; fi
             sleep 1
           done
-          pnpm exec playwright test tests/rate-limit.spec.ts tests/runtime-url.spec.ts tests/workspace-feedback.spec.ts tests/workspace-intent.spec.ts tests/wallet-funds.spec.ts tests/wallet-goals.spec.ts tests/reports.spec.ts tests/pwa.spec.ts tests/theme.spec.ts
+          npx --no-install playwright test
       - name: Bukti pengujian saat gagal
         if: failure()
         uses: actions/upload-artifact@v4
@@ -42,4 +43,42 @@ jobs:
             playwright-report/
             test-results/
             /tmp/duitkita-test-server.log
+          retention-days: 7
+  live-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_APP_MODE: live
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      # No real credentials: these tests must reject anonymous requests before DB access.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test-public-anon-key
+      E2E_LIVE: "1"
+      E2E_LIVE_HTTP: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx --no-install playwright install --with-deps chrome
+      - name: Pengujian batas autentikasi dan HTTP live
+        run: |
+          npm start > /tmp/duitkita-live-test-server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://localhost:3000/masuk > /dev/null; then break; fi
+            sleep 1
+          done
+          npx --no-install playwright test tests/phase-two-public.spec.ts tests/production-http.spec.ts
+      - name: Bukti pengujian live saat gagal
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasil-pengujian-live
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/duitkita-live-test-server.log
           retention-days: 7

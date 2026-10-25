@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { build } from "esbuild";
 import { runInNewContext } from "node:vm";
+import { trustedRequestIp } from "../src/lib/security/request-ip";
 
-async function limiter(env: Record<string, string>) {
+async function limiter(
+  env: Record<string, string>,
+  clock = { now: Date.now() },
+) {
   const bundle = await build({
     entryPoints: ["src/lib/security/rate-limit.ts"],
     bundle: true,
@@ -38,6 +42,11 @@ async function limiter(env: Record<string, string>) {
     exports: testModule.exports,
     require: createRequire(__filename),
     process: { env },
+    Date: class extends Date {
+      static now() {
+        return clock.now;
+      }
+    },
   });
   return testModule.exports as {
     enforceRateLimit: (kind: string, id?: string) => Promise<void>;
@@ -54,6 +63,48 @@ test("rate limit lokal menolak percobaan keenam dan memisahkan identitas", async
       .catch((e) => ({ status: e.status })),
   ).toEqual({ status: 429 });
   expect(await service.enforceRateLimit("register", "sari")).toBeUndefined();
+});
+
+test("limiter membuka jendela baru tepat saat expired", async () => {
+  const clock = { now: 1_000_000 };
+  const service = await limiter({}, clock);
+  for (let i = 0; i < 30; i++)
+    await service.enforceRateLimit("mutation", "budi");
+  clock.now += 59_999;
+  expect(
+    await service
+      .enforceRateLimit("mutation", "budi")
+      .catch((error) => error.status),
+  ).toBe(429);
+  clock.now++;
+  expect(await service.enforceRateLimit("mutation", "budi")).toBeUndefined();
+});
+
+test("kapasitas bucket penuh menolak identitas baru tetapi tidak memblokir bucket aktif", async () => {
+  const service = await limiter({});
+  for (let i = 0; i < 10_000; i++)
+    await service.enforceRateLimit("mutation", `user-${i}`);
+  expect(await service.enforceRateLimit("mutation", "user-0")).toBeUndefined();
+  expect(
+    await service
+      .enforceRateLimit("mutation", "baru")
+      .catch((error) => error.status),
+  ).toBe(429);
+});
+
+test("IP audit tidak mempercayai header forwarding dari deployment tanpa trust boundary", () => {
+  const spoofed = new Headers({
+    "x-forwarded-for": "192.0.2.1",
+    "x-vercel-forwarded-for": "192.0.2.2",
+  });
+  expect(trustedRequestIp(spoofed, false)).toBeUndefined();
+  expect(trustedRequestIp(spoofed, true)).toBe("192.0.2.2");
+  expect(
+    trustedRequestIp(
+      new Headers({ "x-vercel-forwarded-for": "bukan-ip" }),
+      true,
+    ),
+  ).toBeUndefined();
 });
 test("production tanpa Upstash tetap berjalan dan membatasi request", async () => {
   const service = await limiter({ VERCEL: "1" });

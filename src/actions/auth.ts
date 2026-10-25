@@ -152,12 +152,6 @@ async function familyAction(
     };
   }
 }
-export async function createFamily(input: unknown) {
-  return familyAction("create", input);
-}
-export async function joinFamily(input: unknown) {
-  return familyAction("join", input);
-}
 export async function onboarding(input: unknown) {
   const parsed = z
     .object({ kind: z.enum(["create", "join"]), value: z.string() })

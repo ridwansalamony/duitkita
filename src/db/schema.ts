@@ -124,6 +124,10 @@ export const categories = pgTable(
       "category_monthly_budget_valid",
       sql`${t.monthlyBudget} is null or (${t.type}='expense' and ${t.monthlyBudget}>0)`,
     ),
+    check(
+      "category_budget_finite",
+      sql`${t.monthlyBudget} is null or ${t.monthlyBudget}<>'NaN'::numeric`,
+    ),
   ],
 );
 
@@ -184,6 +188,10 @@ export const transactions = pgTable(
       "transaction_payload_size",
       sql`(${t.description} is null or length(${t.description})<=2000) and (${t.receiptUrl} is null or length(${t.receiptUrl})<=300) and (${t.receiptOcrData} is null or octet_length(${t.receiptOcrData}::text)<=4096)`,
     ),
+    amountFinite: check(
+      "transaction_amount_finite",
+      sql`${t.amount}<>'NaN'::numeric`,
+    ),
   }),
 );
 
@@ -219,6 +227,10 @@ export const savingGoals = pgTable(
   },
   (t) => [
     index("goals_wallet_idx").on(t.walletId),
+    check(
+      "goal_amounts_finite",
+      sql`${t.targetAmount}<>'NaN'::numeric and ${t.currentAmount}<>'NaN'::numeric`,
+    ),
     index("goals_creator_idx").on(t.createdByUserId),
     uniqueIndex("goal_wallet_open_idx")
       .on(t.familyId, t.walletId)
@@ -232,21 +244,27 @@ export const savingGoals = pgTable(
 );
 
 // === SAVING CONTRIBUTIONS (arsip sebelum migrasi dompet; hanya baca) ===
-export const savingContributions = pgTable("saving_contributions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  goalId: uuid("goal_id")
-    .notNull()
-    .references(() => savingGoals.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  walletId: uuid("wallet_id").references(() => wallets.id),
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  note: text("note"),
-  contributedAt: timestamp("contributed_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const savingContributions = pgTable(
+  "saving_contributions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    goalId: uuid("goal_id")
+      .notNull()
+      .references(() => savingGoals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    walletId: uuid("wallet_id").references(() => wallets.id),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    note: text("note"),
+    contributedAt: timestamp("contributed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    check("contribution_amount_finite", sql`${t.amount}<>'NaN'::numeric`),
+  ],
+);
 
 // === AUDIT LOGS ===
 export const auditLogs = pgTable(

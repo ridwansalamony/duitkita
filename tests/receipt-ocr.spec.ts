@@ -75,7 +75,7 @@ test("worker nyata membaca struk lokal, saran diperiksa sebelum diterapkan", asy
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await page.screenshot({
-    path: "docs/screenshots/fase-2-ocr-tesseract.png",
+    path: "test-results/screenshots/fase-2-ocr-tesseract.png",
     fullPage: true,
   });
 });

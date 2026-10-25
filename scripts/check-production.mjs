@@ -1,15 +1,17 @@
 import { config } from "dotenv";
 config({ path: ".env.local", quiet: true });
 
-const required = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  "DATABASE_URL",
-  "DIRECT_URL",
-];
+const required = ["NEXT_PUBLIC_SUPABASE_URL", "DATABASE_URL", "DIRECT_URL"];
 const problems = required
   .filter((key) => !process.env[key]?.trim())
   .map((key) => `${key} belum diisi.`);
+if (
+  !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() &&
+  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+)
+  problems.push(
+    "Isi NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY atau NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+  );
 if (process.env.DATABASE_URL) {
   try {
     const database = new URL(process.env.DATABASE_URL);

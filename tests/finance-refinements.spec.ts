@@ -65,7 +65,7 @@ test("form sesuai jenis, nominal berformat, transaksi pada tanggal sama tampil t
     .getByLabel("Dompet tujuan", { exact: true })
     .selectOption("sari-wallet");
   await page.screenshot({
-    path: "docs/screenshots/fase-2-form-transfer-ringkas.png",
+    path: "test-results/screenshots/fase-2-form-transfer-ringkas.png",
     fullPage: true,
   });
 });
@@ -145,7 +145,7 @@ test("budget kategori mengikuti tambah, ubah, hapus dan bulan transaksi", async 
   await returnToCategories();
   await expect(card).toContainText(/Melebihi budget Rp\s?200\.000/);
   await page.screenshot({
-    path: "docs/screenshots/fase-2-budget-kategori.png",
+    path: "test-results/screenshots/fase-2-budget-kategori.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -155,7 +155,7 @@ test("budget kategori mengikuti tambah, ubah, hapus dan bulan transaksi", async 
     ),
   ).toBeTruthy();
   await page.screenshot({
-    path: "docs/screenshots/fase-2-budget-mobile.png",
+    path: "test-results/screenshots/fase-2-budget-mobile.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });

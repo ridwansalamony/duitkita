@@ -4,7 +4,7 @@ import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useFormRequest } from "./request-form";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
 import { Slot } from "radix-ui";
 
 const buttonVariants = cva(

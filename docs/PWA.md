@@ -10,6 +10,6 @@ PWA memakai nama, simbol logo, warna, stack, dan autentikasi DuitKita saat ini. 
 - Service worker hanya menangani kegagalan navigasi saat offline. Tidak menggunakan Cache Storage, tidak menyimpan halaman akun/struk/data keluarga, tidak mengantre transaksi, dan tidak mengintersep POST maupun fetch API. Operasi keuangan tetap membutuhkan internet.
 - Service worker aktif pada build production saja. Header no-store memastikan browser memeriksa versi pekerja terbaru.
 
-Verifikasi lokal: `pnpm build`, `pnpm start`, kemudian `pnpm exec playwright test tests/pwa.spec.ts`. Atur `PLAYWRIGHT_BASE_URL` jika menggunakan port berbeda. Tes mencakup manifest/ikon, simulasi prompt browser, petunjuk iPhone, penutupan banner, serta offline dan pemulihan koneksi. Pemasangan native tetap perlu dicoba pada Android/iPhone nyata setelah deployment.
+Verifikasi lokal: `npm run build`, `npm start`, kemudian `npx --no-install playwright test tests/pwa.spec.ts`. Atur `PLAYWRIGHT_BASE_URL` jika menggunakan port berbeda. Tes mencakup manifest/ikon, simulasi prompt browser, petunjuk iPhone, penutupan banner, serta offline dan pemulihan koneksi. Pemasangan native tetap perlu dicoba pada Android/iPhone nyata setelah deployment.
 
 Rujukan: https://nextjs.org/docs/app/guides/progressive-web-apps dan https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent.

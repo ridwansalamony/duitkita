@@ -1,10 +1,12 @@
+import { supabasePublicKey } from "@/lib/supabase/public-key";
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { appUrl } from "@/lib/app-url";
 export async function supabaseServer() {
   const jar = await cookies();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = supabasePublicKey();
   if (!url || !key)
     throw new Error("Lengkapi konfigurasi Supabase di .env.local.");
   return createServerClient(url, key, {
@@ -12,8 +14,7 @@ export async function supabaseServer() {
       httpOnly: true,
       sameSite: "lax",
       secure:
-        process.env.NODE_ENV === "production" &&
-        process.env.NEXT_PUBLIC_APP_URL?.startsWith("https:"),
+        process.env.NODE_ENV === "production" && appUrl().startsWith("https:"),
     },
     cookies: {
       getAll: () => jar.getAll(),

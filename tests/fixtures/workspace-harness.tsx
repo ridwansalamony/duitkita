@@ -49,7 +49,7 @@ const initial = {
 window.harness.initial = {
   success: true,
   data: initial,
-  identity: { familyId: seed.FAMILY_ID },
+  identity: { familyId: seed.FAMILY_ID, userId: "budi" },
 };
 function Actions() {
   const { data } = useDemo();

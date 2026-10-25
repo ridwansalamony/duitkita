@@ -101,7 +101,7 @@ test("unduhan Excel berisi nominal angka serta PDF memiliki dokumen valid", asyn
   expect(readFileSync(pdfPath).subarray(0, 5).toString()).toBe("%PDF-");
   expect(readFileSync(pdfPath).length).toBeGreaterThan(10000);
   await page.screenshot({
-    path: "docs/screenshots/fase-3-laporan.png",
+    path: "test-results/screenshots/fase-3-laporan.png",
     fullPage: true,
   });
   await page.getByLabel("Dari tanggal").fill("2027-01-01");

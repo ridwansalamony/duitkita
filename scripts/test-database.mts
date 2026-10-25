@@ -1058,4 +1058,55 @@ assert.equal(
 console.log(
   "Lulus: batch besar tidak melewati limiter database dan tidak meninggalkan baris parsial.",
 );
+// Numeric NaN is greater than ordinary numbers in PostgreSQL: the old >0 CHECK
+// is insufficient even though the application's Zod schema rejects it.
+assert.equal(await scalar("select 'NaN'::numeric(15,2)>0"), true);
+await db.exec(
+  readFileSync("supabase/migrations/0008_nominal_finite.sql", "utf8"),
+);
+await db.exec("delete from duitkita_private.write_limits");
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query(
+      "insert into public.transactions(family_id,user_id,wallet_id,type,amount,transaction_date) values($1,$2,$3,'income','NaN','2026-10-01')",
+      [fresh, extra, bulkWallet],
+    ),
+  ),
+  /transaction_amount_finite/,
+);
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query(
+      "insert into public.categories(family_id,name,type,monthly_budget) values($1,'Budget tidak valid','expense','NaN')",
+      [fresh],
+    ),
+  ),
+  /category_budget_finite/,
+);
+await assert.rejects(
+  asUser(extra, fresh, () =>
+    db.query(
+      "insert into public.saving_goals(family_id,created_by_user_id,wallet_id,name,target_amount) values($1,$2,$3,'Target tidak valid','NaN')",
+      [fresh, extra, bulkWallet],
+    ),
+  ),
+  /goal_amounts_finite/,
+);
+await asUser(extra, fresh, () =>
+  db.query(
+    "insert into public.transactions(family_id,user_id,wallet_id,type,amount,transaction_date) values($1,$2,$3,'income',0.01,'2026-10-01')",
+    [fresh, extra, bulkWallet],
+  ),
+);
+assert.equal(
+  Number(
+    await asUser(extra, fresh, () =>
+      scalar("select public.wallet_balance($1,$2)", [bulkWallet, fresh]),
+    ),
+  ),
+  100.01,
+);
+console.log(
+  "Lulus: NaN transaksi, budget dan target ditolak di jalur database langsung; nominal sen valid tetap diterima.",
+);
 await db.close();

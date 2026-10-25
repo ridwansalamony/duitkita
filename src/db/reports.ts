@@ -9,11 +9,12 @@ import {
 
 export async function getFinancialReport(input: unknown) {
   const { start, end } = reportFilter.parse(input);
-  return withIdentity(async (tx, { familyId }) => {
-    const [family] = await tx.execute(
-      sql`select name from public.families where id=${familyId}::uuid`,
-    );
-    const rows = await tx.execute(sql`
+  return withIdentity(
+    async (tx, { familyId }) => {
+      const [family] = await tx.execute(
+        sql`select name from public.families where id=${familyId}::uuid`,
+      );
+      const rows = await tx.execute(sql`
       select t.id,t.transaction_date as date,t.type,t.amount,t.description,
         coalesce(t.category_id::text,'') as "categoryId",
         case when t.type='transfer' then 'Transfer' else coalesce(c.name,'Lainnya') end as category,
@@ -27,18 +28,21 @@ export async function getFinancialReport(input: unknown) {
       where t.family_id=${familyId}::uuid and t.transaction_date between ${start}::date and ${end}::date
       order by t.transaction_date desc,t.created_at desc,t.id desc
       limit 10001`);
-    if (rows.length > 10000)
-      throw new Error(
-        "Laporan terlalu besar. Pilih rentang tanggal yang lebih pendek (maksimal 10.000 transaksi).",
+      if (rows.length > 10000)
+        throw new Error(
+          "Laporan terlalu besar. Pilih rentang tanggal yang lebih pendek (maksimal 10.000 transaksi).",
+        );
+      return aggregateReport(
+        String(family.name),
+        start,
+        end,
+        rows.map((r) => ({
+          ...r,
+          amount: Number(r.amount),
+        })) as ReportTransaction[],
       );
-    return aggregateReport(
-      String(family.name),
-      start,
-      end,
-      rows.map((r) => ({
-        ...r,
-        amount: Number(r.amount),
-      })) as ReportTransaction[],
-    );
-  });
+    },
+    true,
+    { rateLimit: "report" },
+  );
 }

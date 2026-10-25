@@ -11,11 +11,13 @@ test.describe("HTTP production", () => {
     ]) {
       const response = await request.get(path);
       expect(response.status()).toBe(401);
+      expect(response.headers()["cache-control"]).toContain("no-store");
     }
   });
   test("SEO publik dan header keamanan tersedia", async ({ request }) => {
     const home = await request.get("/");
     expect(home.ok()).toBe(true);
+    expect(home.headers()["x-powered-by"]).toBeUndefined();
     expect(home.headers()["x-content-type-options"]).toBe("nosniff");
     expect(home.headers()["content-security-policy"]).toContain(
       "frame-ancestors 'none'",
@@ -26,7 +28,12 @@ test.describe("HTTP production", () => {
     expect(await sitemap.text()).not.toContain("/transaksi");
     const robots = await request.get("/robots.txt");
     expect(await robots.text()).toContain("Disallow: /api/");
-    for (const path of ["/masuk", "/daftar", "/lupa-kata-sandi", "/atur-kata-sandi"]) {
+    for (const path of [
+      "/masuk",
+      "/daftar",
+      "/lupa-kata-sandi",
+      "/atur-kata-sandi",
+    ]) {
       expect(await robots.text()).not.toContain(`Disallow: ${path}`);
       const authPage = await request.get(path);
       expect(await authPage.text()).toContain('content="noindex, nofollow"');

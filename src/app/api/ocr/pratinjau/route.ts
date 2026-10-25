@@ -2,6 +2,7 @@ import { enforceRateLimit, RateLimitError } from "@/lib/security/rate-limit";
 import { NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { storeReceipt } from "@/lib/receipts/server";
+import { readBoundedBody, RequestBodyError } from "@/lib/security/request-body";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 export async function POST(request: NextRequest) {
@@ -15,33 +16,40 @@ export async function POST(request: NextRequest) {
     data: { user },
   } = await (await supabaseServer()).auth.getUser();
   if (!user) return new Response("Silakan masuk kembali", { status: 401 });
-  try { await enforceRateLimit("receipt", user.id); } catch (error) {
-    return new Response(error instanceof RateLimitError ? error.message : "Layanan belum tersedia", { status: error instanceof RateLimitError ? error.status : 503, headers: { "Retry-After": String(error instanceof RateLimitError ? error.retryAfter : 60), "Cache-Control": "no-store" } });
-  }
-  const length = Number(request.headers.get("content-length"));
-  if (length > 6 * 1024 * 1024)
-    return new Response("Ukuran unggahan tidak valid", { status: 413 });
-  const reader = request.body?.getReader();
-  if (!reader) return new Response("Pilih foto struk", { status: 400 });
-  const chunks: ArrayBuffer[] = [];
-  let size = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > 6 * 1024 * 1024) {
-      await reader.cancel();
-      return new Response("Ukuran unggahan tidak valid", { status: 413 });
-    }
-    chunks.push(Uint8Array.from(value).buffer);
+  try {
+    await enforceRateLimit("receipt", user.id);
+  } catch (error) {
+    return new Response(
+      error instanceof RateLimitError
+        ? error.message
+        : "Layanan belum tersedia",
+      {
+        status: error instanceof RateLimitError ? error.status : 503,
+        headers: {
+          "Retry-After": String(
+            error instanceof RateLimitError ? error.retryAfter : 60,
+          ),
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   }
   let form: FormData;
   try {
-    form = await new Response(new Blob(chunks), {
+    const body = await readBoundedBody(request, 6 * 1024 * 1024);
+    form = await new Response(body, {
       headers: { "Content-Type": request.headers.get("content-type") || "" },
     }).formData();
-  } catch {
-    return new Response("Format unggahan tidak valid", { status: 400 });
+  } catch (error) {
+    return new Response(
+      error instanceof RequestBodyError
+        ? error.message
+        : "Format unggahan tidak valid",
+      {
+        status: error instanceof RequestBodyError ? error.status : 400,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
   }
   const file = form.get("file");
   if (!(file instanceof File))

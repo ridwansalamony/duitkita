@@ -25,11 +25,30 @@ try {
     where t.family_id<>w.family_id or (d.id is not null and t.family_id<>d.family_id) or (c.id is not null and t.family_id<>c.family_id)`;
   assert.equal(Number(violations.count), 0);
   const constraints =
-    await connection`select conname from pg_constraint where conname in ('profile_payload_size','transaction_payload_size')`;
-  assert.equal(constraints.length, 2);
-  const gates = await connection`select count(*) as count from pg_trigger where tgname='admit_write' and not tgisinternal`;
+    await connection`select conname from pg_constraint where conname in ('profile_payload_size','transaction_payload_size','transaction_amount_finite','goal_amounts_finite','category_budget_finite','contribution_amount_finite')`;
+  assert.equal(constraints.length, 6);
+  // NOT VALID preserves old rows at migration time. Detect legacy NaN without
+  // printing personal data or silently replacing financial history.
+  const [nonFinite] = await connection`select
+    (select count(*) from public.transactions where amount='NaN'::numeric) +
+    (select count(*) from public.saving_goals where target_amount='NaN'::numeric or current_amount='NaN'::numeric) +
+    (select count(*) from public.categories where monthly_budget='NaN'::numeric) +
+    (select count(*) from public.saving_contributions where amount='NaN'::numeric) as count`;
+  assert.equal(
+    Number(nonFinite.count),
+    0,
+    "Nominal NaN lama perlu ditinjau sebelum validasi constraint.",
+  );
+  const [grants] = await connection`select
+    has_table_privilege('anon','public.transactions','SELECT') as anonymous_read,
+    has_function_privilege('authenticated','public.wallet_ledger(uuid,uuid)','EXECUTE') as internal_ledger`;
+  assert.equal(grants.anonymous_read, false);
+  assert.equal(grants.internal_ledger, false);
+  const gates =
+    await connection`select count(*) as count from pg_trigger where tgname='admit_write' and not tgisinternal`;
   assert.equal(Number(gates[0].count), 6);
-  const [privacy] = await connection`select has_schema_privilege('authenticated','duitkita_private','USAGE') as exposed`;
+  const [privacy] =
+    await connection`select has_schema_privilege('authenticated','duitkita_private','USAGE') as exposed`;
   assert.equal(privacy.exposed, false);
   console.log(
     "Lulus: delapan tabel memakai RLS, audit Realtime aktif, indeks dan batas payload terpasang, tidak ada referensi transaksi lintas keluarga. Pemeriksaan hanya baca.",

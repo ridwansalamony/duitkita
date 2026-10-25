@@ -13,32 +13,34 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
+  SheetTrigger,
   SheetTitle,
   SheetDescription,
-  SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
-import { Logo, ThemeToggle } from "@/components/shared/common";
+import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/shared/brand-logo";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { cn } from "@/lib/utils";
 export function PublicShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="public-site">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-5 md:px-8">
+        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-5 md:px-8">
           <Logo />
-          <nav className="hidden gap-8 md:flex">
+          <nav className="hidden gap-6 lg:flex">
             {[
               ["/fitur", "Fitur"],
               ["/tentang", "Tentang Kami"],
               ["/kontak", "Kontak"],
             ].map(([href, label]) => (
               <Link
+                prefetch={false}
                 key={href}
                 className={cn(
                   "text-sm text-muted-foreground transition-colors hover:text-primary",
@@ -53,13 +55,15 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button asChild variant="ghost" className="hidden sm:inline-flex">
-              <Link href="/masuk">Masuk</Link>
+              <Link prefetch={false} href="/masuk">
+                Masuk
+              </Link>
             </Button>
             <Button
               asChild
               className="gradient-button hidden rounded-xl sm:inline-flex"
             >
-              <Link href="/daftar">
+              <Link prefetch={false} href="/daftar">
                 Mulai Bersama <ArrowUpRight size={16} />
               </Link>
             </Button>
@@ -68,7 +72,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="md:hidden"
+                  className="lg:hidden"
                   aria-label="Buka menu"
                 >
                   <Menu />
@@ -76,7 +80,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent
                 showCloseButton={false}
-                className="w-[calc(100%-1.5rem)] max-w-sm gap-0 rounded-l-3xl bg-card"
+                className="public-site w-[calc(100%-1.5rem)] max-w-sm gap-0 rounded-l-3xl bg-card"
               >
                 <div className="border-b bg-secondary/40 px-6 pb-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
                   <div className="mb-7 flex items-center justify-between gap-3">
@@ -129,6 +133,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     },
                   ].map(({ href, label, detail, Icon }) => (
                     <Link
+                      prefetch={false}
                       key={href}
                       onClick={() => setOpen(false)}
                       aria-current={path === href ? "page" : undefined}
@@ -164,7 +169,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     asChild
                     className="gradient-button h-12 w-full rounded-xl"
                   >
-                    <Link href="/daftar" onClick={() => setOpen(false)}>
+                    <Link
+                      prefetch={false}
+                      href="/daftar"
+                      onClick={() => setOpen(false)}
+                    >
                       Mulai Bersama <ArrowUpRight size={17} />
                     </Link>
                   </Button>
@@ -173,8 +182,12 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
                     variant="outline"
                     className="mt-3 h-12 w-full rounded-xl"
                   >
-                    <Link href="/masuk" onClick={() => setOpen(false)}>
-                      Masuk ke akun
+                    <Link
+                      prefetch={false}
+                      href="/masuk"
+                      onClick={() => setOpen(false)}
+                    >
+                      Masuk
                     </Link>
                   </Button>
                   <p className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -201,25 +214,49 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <div className="flex flex-wrap gap-12 text-sm md:justify-end">
             <div className="grid gap-3">
               <span className="font-semibold">Kenali DuitKita</span>
-              <Link href="/fitur" className="text-muted-foreground">
-                Fitur lengkap
+              <Link
+                prefetch={false}
+                href="/fitur"
+                className="text-muted-foreground"
+              >
+                Fitur
               </Link>
-              <Link href="/tentang" className="text-muted-foreground">
-                Cerita kami
+              <Link
+                prefetch={false}
+                href="/tentang"
+                className="text-muted-foreground"
+              >
+                Tentang Kami
               </Link>
-              <Link href="/kontak" className="text-muted-foreground">
-                Hubungi kami
+              <Link
+                prefetch={false}
+                href="/kontak"
+                className="text-muted-foreground"
+              >
+                Kontak
               </Link>
             </div>
             <div className="grid gap-3">
               <span className="font-semibold">Mulai bersama</span>
-              <Link href="/daftar" className="text-muted-foreground">
-                Buat akun
+              <Link
+                prefetch={false}
+                href="/daftar"
+                className="text-muted-foreground"
+              >
+                Mulai Bersama
               </Link>
-              <Link href="/dashboard" className="text-muted-foreground">
-                {isDemo ? "Jelajahi demo" : "Buka Dasbor"}
+              <Link
+                prefetch={false}
+                href="/dashboard"
+                className="text-muted-foreground"
+              >
+                {isDemo ? "Lihat Demo" : "Buka Dasbor"}
               </Link>
-              <Link href="/tentang#privasi" className="text-muted-foreground">
+              <Link
+                prefetch={false}
+                href="/tentang#privasi"
+                className="text-muted-foreground"
+              >
                 {isDemo ? "Privasi & ketentuan demo" : "Tentang data Anda"}
               </Link>
             </div>
@@ -233,6 +270,6 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           </span>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

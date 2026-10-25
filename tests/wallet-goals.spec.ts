@@ -8,7 +8,7 @@ test("saldo target mengikuti transfer, perubahan dan hapus tanpa kontribusi manu
   await expect(balance).toContainText(/Rp\s?9\.750\.000/);
   await expect(page.getByRole("button", { name: /Kontribusi/ })).toHaveCount(0);
   await page.screenshot({
-    path: "docs/screenshots/fase-2-target-dompet.png",
+    path: "test-results/screenshots/fase-2-target-dompet.png",
     fullPage: true,
   });
   await page
@@ -70,7 +70,7 @@ test("saldo target mengikuti transfer, perubahan dan hapus tanpa kontribusi manu
     )
     .toBeTruthy();
   await page.screenshot({
-    path: "docs/screenshots/fase-2-target-dompet-mobile.png",
+    path: "test-results/screenshots/fase-2-target-dompet-mobile.png",
     fullPage: true,
   });
 });
@@ -130,7 +130,7 @@ test("target mewajibkan dompet unik dan kedua pengguna memakai dompet utama", as
   await expect(selector.locator('option[value="sari-wallet"]')).toHaveCount(0);
   await selector.selectOption("budi-wallet");
   await page.screenshot({
-    path: "docs/screenshots/fase-2-pilih-dompet-target.png",
+    path: "test-results/screenshots/fase-2-pilih-dompet-target.png",
     fullPage: true,
   });
   await page

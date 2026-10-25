@@ -74,7 +74,7 @@ test("foto dan inisial profil sinkron pada navbar serta pencatat transaksi tanpa
     )
     .toBeGreaterThan(0);
   await page.screenshot({
-    path: "docs/screenshots/fase-2-avatar-transaksi.png",
+    path: "test-results/screenshots/fase-2-avatar-transaksi.png",
     fullPage: true,
   });
   await header.getByRole("button", { name: /Ridwan Pemilik keluarga/ }).click();

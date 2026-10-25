@@ -1,15 +1,11 @@
 import "server-only";
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { z } from "zod";
+import { desc, eq, sql } from "drizzle-orm";
 import { withIdentity, type Identity, type TenantTx } from "./index";
 import * as s from "./schema";
 import type { DemoData } from "@/lib/dummy/store";
 import type { Transaction } from "@/lib/dummy/data";
 import { supabaseServer } from "@/lib/supabase/server";
-export async function snapshot(
-  tx: TenantTx,
-  identity: Identity,
-): Promise<DemoData> {
+async function snapshot(tx: TenantTx, identity: Identity): Promise<DemoData> {
   const { familyId: f } = identity;
   const [family] = await tx
     .select()
@@ -162,7 +158,7 @@ export async function refreshWorkspaceData(knownRevision?: string) {
       const revision = latest?.id || "empty";
       // Revision is only a cache hint: identity and RLS are still verified on every request.
       if (knownRevision === revision)
-        return { unchanged: true as const, revision };
+        return { unchanged: true as const, revision, identity: id };
       return {
         unchanged: false as const,
         revision,
@@ -202,74 +198,4 @@ async function signWorkspaceReceipts<T extends { data: DemoData }>(
     }));
   }
   return workspace;
-}
-const filterSchema = z.object({
-  start: z.iso.date().optional(),
-  end: z.iso.date().optional(),
-  walletId: z.uuid().optional(),
-  categoryId: z.uuid().optional(),
-  userId: z.uuid().optional(),
-});
-export async function getTransactionsByFamily(input: unknown = {}) {
-  const filter = filterSchema.parse(input);
-  return withIdentity((tx, { familyId: f }) =>
-    tx
-      .select()
-      .from(s.transactions)
-      .where(
-        and(
-          eq(s.transactions.familyId, f),
-          filter.start
-            ? gte(s.transactions.transactionDate, filter.start)
-            : undefined,
-          filter.end
-            ? lte(s.transactions.transactionDate, filter.end)
-            : undefined,
-          filter.walletId
-            ? eq(s.transactions.walletId, filter.walletId)
-            : undefined,
-          filter.categoryId
-            ? eq(s.transactions.categoryId, filter.categoryId)
-            : undefined,
-          filter.userId ? eq(s.transactions.userId, filter.userId) : undefined,
-        ),
-      )
-      .orderBy(
-        desc(s.transactions.transactionDate),
-        desc(s.transactions.createdAt),
-        desc(s.transactions.id),
-      ),
-  );
-}
-function sameFamily(requested: string, actual: string) {
-  if (!z.uuid().safeParse(requested).success || requested !== actual)
-    throw new Error("Keluarga tidak dapat diakses.");
-}
-export async function getWalletBalances(familyId: string) {
-  return withIdentity(async (tx, id) => {
-    sameFamily(familyId, id.familyId);
-    return tx.execute(
-      sql`select id,public.wallet_balance(id,${familyId}::uuid) as balance from public.wallets where family_id=${familyId}::uuid`,
-    );
-  });
-}
-export async function getSavingGoals(familyId: string) {
-  return withIdentity((tx, id) => {
-    sameFamily(familyId, id.familyId);
-    return tx
-      .select()
-      .from(s.savingGoals)
-      .where(eq(s.savingGoals.familyId, familyId));
-  });
-}
-export async function getAuditLogs(familyId: string) {
-  return withIdentity((tx, id) => {
-    sameFamily(familyId, id.familyId);
-    return tx
-      .select()
-      .from(s.auditLogs)
-      .where(eq(s.auditLogs.familyId, familyId))
-      .orderBy(sql`${s.auditLogs.createdAt} desc`)
-      .limit(500);
-  });
 }

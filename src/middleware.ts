@@ -1,6 +1,8 @@
+import { supabasePublicKey } from "@/lib/supabase/public-key";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isDemo } from "@/lib/mode";
+import { appUrl } from "@/lib/app-url";
 const protectedPaths = [
   "/dashboard",
   "/transaksi",
@@ -22,8 +24,12 @@ export async function middleware(request: NextRequest) {
   const protectedRoute = protectedPaths.some(
     (p) => path === p || path.startsWith(p + "/"),
   );
+  // API handlers and Server Actions verify their own identity. Public pages and
+  // OCR/font assets do not need a second Auth network request on every visit.
+  if (!protectedRoute && path !== "/masuk" && path !== "/daftar")
+    return response;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
-    key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    key = supabasePublicKey();
   if (!url || !key)
     return protectedRoute
       ? NextResponse.redirect(new URL("/masuk?pesan=konfigurasi", request.url))
@@ -32,7 +38,8 @@ export async function middleware(request: NextRequest) {
     cookieOptions: {
       httpOnly: true,
       sameSite: "lax",
-      secure: request.nextUrl.protocol === "https:",
+      secure:
+        process.env.NODE_ENV === "production" && appUrl().startsWith("https:"),
     },
     cookies: {
       getAll: () => request.cookies.getAll(),
@@ -57,9 +64,12 @@ export async function middleware(request: NextRequest) {
   }
   if (destination) {
     const redirect = NextResponse.redirect(new URL(destination, request.url));
+    redirect.headers.set("Cache-Control", "private, no-store");
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     return redirect;
   }
+  if (protectedRoute)
+    response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 export const config = {

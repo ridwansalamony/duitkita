@@ -361,10 +361,10 @@ test("laporan, pencarian, dan validasi registrasi berfungsi", async ({
 
 test("tampilan mobile, dark mode, dan screenshot hasil", async ({ page }) => {
   test.setTimeout(240000);
-  fs.mkdirSync("docs/screenshots", { recursive: true });
+  fs.mkdirSync("test-results/screenshots", { recursive: true });
   await page.goto("/");
   await page.screenshot({
-    path: "docs/screenshots/landing-desktop.png",
+    path: "test-results/screenshots/landing-desktop.png",
     fullPage: true,
   });
   await page.goto("/dashboard");
@@ -374,7 +374,7 @@ test("tampilan mobile, dark mode, dan screenshot hasil", async ({ page }) => {
   await expect(page.locator(".recharts-sector").first()).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
-    path: "docs/screenshots/dashboard-desktop.png",
+    path: "test-results/screenshots/dashboard-desktop.png",
     fullPage: true,
   });
   await page
@@ -383,7 +383,7 @@ test("tampilan mobile, dark mode, dan screenshot hasil", async ({ page }) => {
   await page.getByRole("menuitemradio", { name: "Gelap", exact: true }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await page.screenshot({
-    path: "docs/screenshots/dashboard-dark.png",
+    path: "test-results/screenshots/dashboard-dark.png",
     fullPage: true,
   });
   await page
@@ -422,7 +422,7 @@ test("tampilan mobile, dark mode, dan screenshot hasil", async ({ page }) => {
         await page.evaluate(() => window.scrollTo(0, 0));
       }
       await page.screenshot({
-        path: `docs/screenshots/${route === "/" ? "landing" : "dashboard"}-mobile.png`,
+        path: `test-results/screenshots/${route === "/" ? "landing" : "dashboard"}-mobile.png`,
         fullPage: true,
       });
     }

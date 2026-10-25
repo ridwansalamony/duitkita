@@ -14,8 +14,9 @@ export function mutationIntent(
     return { entity: "family", action: "update", value: after.familyName };
   if (before.inviteCode !== after.inviteCode)
     return { entity: "invite", action: "update", value: null };
+  const previousUsers = new Map(before.users.map((u) => [u.id, u]));
   for (const u of after.users) {
-    const old = before.users.find((v) => v.id === u.id);
+    const old = previousUsers.get(u.id);
     if (old?.familyId && !u.familyId)
       return { entity: "member", action: "delete", value: u.id };
     if (u.id === userId && JSON.stringify(old) !== JSON.stringify(u))
@@ -30,12 +31,15 @@ export function mutationIntent(
   ] as const) {
     const old = before[entity],
       next = after[entity];
-    const removed = old.find((v) => !next.some((n) => n.id === v.id));
+    if (old === next) continue;
+    const previous = new Map(old.map((v) => [v.id, v]));
+    const nextIds = new Set(next.map((v) => v.id));
+    const removed = old.find((v) => !nextIds.has(v.id));
     if (removed) return { entity, action: "delete", value: removed.id };
     for (const v of next) {
-      const prior = old.find((p) => p.id === v.id);
+      const prior = previous.get(v.id);
       if (!prior) return { entity, action: "create", value: v };
-      if (JSON.stringify(prior) !== JSON.stringify(v))
+      if (prior !== v && JSON.stringify(prior) !== JSON.stringify(v))
         return { entity, action: "update", value: v };
     }
   }

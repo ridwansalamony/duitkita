@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   devIndicators: false,
+  poweredByHeader: false,
   experimental: { serverActions: { bodySizeLimit: "6mb" } },
   async headers() {
     const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -34,6 +35,15 @@ const config: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          ...(!development &&
+          process.env.NEXT_PUBLIC_APP_URL?.startsWith("https:")
+            ? [
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=31536000",
+                },
+              ]
+            : []),
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

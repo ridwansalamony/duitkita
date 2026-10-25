@@ -36,7 +36,7 @@ test("form menolak transfer dompet kosong tanpa menyimpan transaksi", async ({
   await expect(page).toHaveURL(/\/transaksi\/baru$/);
   await expect(page.getByLabel("Nominal transaksi")).toHaveValue("200.000");
   await page.screenshot({
-    path: "docs/screenshots/fase-2-saldo-tidak-cukup.png",
+    path: "test-results/screenshots/fase-2-saldo-tidak-cukup.png",
     fullPage: true,
   });
   await page.getByRole("link", { name: "Dompet", exact: true }).first().click();

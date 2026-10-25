@@ -16,19 +16,26 @@ export function familyInitials(name: string) {
       .toLocaleUpperCase("id-ID") || "K"
   );
 }
-export function rupiah(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-export function tanggal(value: string, full = false) {
-  return new Intl.DateTimeFormat("id-ID", {
+const currencyFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+const dateFormatter = (full: boolean) =>
+  new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: full ? "long" : "short",
     year: full ? "numeric" : undefined,
     timeZone: "Asia/Jakarta",
-  }).format(new Date(value));
+  });
+const shortDateFormatter = dateFormatter(false),
+  fullDateFormatter = dateFormatter(true);
+export function rupiah(value: number) {
+  return currencyFormatter.format(value);
+}
+export function tanggal(value: string, full = false) {
+  return (full ? fullDateFormatter : shortDateFormatter).format(
+    new Date(value),
+  );
 }

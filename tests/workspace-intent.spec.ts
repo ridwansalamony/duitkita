@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { mutationIntent } from "../src/lib/workspace/intent";
 import { optimisticBalances } from "../src/lib/workspace/optimistic";
 import type { DemoData } from "../src/lib/dummy/store";
+import { validateTransactionFunds } from "../src/lib/dummy/store";
 const empty: DemoData = {
   familyName: "Keluarga Budi & Sari",
   inviteCode: "DUIT-XY7A",
@@ -45,6 +46,84 @@ test("penghapusan kategori mengirim satu niat, bukan mempercayai perubahan trans
       "budi",
     ),
   ).toEqual({ entity: "categories", action: "delete", value: "makan" });
+});
+
+test("batch dua debit tidak boleh menggunakan saldo yang sama dua kali", () => {
+  const wallet = {
+    id: "rumah",
+    familyId: "keluarga",
+    name: "Rumah",
+    type: "shared" as const,
+    ownerUserId: null,
+    color: "#ffffff",
+  };
+  const before = {
+    ...empty,
+    wallets: [wallet],
+    walletBalances: { rumah: 100 },
+  };
+  const transaction = {
+    id: "a",
+    familyId: "keluarga",
+    userId: "budi",
+    walletId: "rumah",
+    categoryId: "makan",
+    type: "expense" as const,
+    amount: 60,
+    date: "2026-10-01",
+    description: "Belanja",
+  };
+  expect(
+    validateTransactionFunds(
+      before,
+      { ...before, transactions: [transaction, { ...transaction, id: "b" }] },
+      "keluarga",
+    ),
+  ).toBe(false);
+  expect(
+    validateTransactionFunds(
+      before,
+      {
+        ...before,
+        transactions: [transaction, { ...transaction, id: "b", amount: 40 }],
+      },
+      "keluarga",
+    ),
+  ).toBe(true);
+});
+
+test("saldo optimistis mempertahankan sen tanpa akumulasi pecahan biner", () => {
+  const wallet = {
+    id: "rumah",
+    familyId: "keluarga",
+    name: "Rumah",
+    type: "shared" as const,
+    ownerUserId: null,
+    color: "#ffffff",
+  };
+  const before = {
+    ...empty,
+    wallets: [wallet],
+    walletBalances: { rumah: 0 },
+    familyBalance: 0,
+  };
+  const transaction = {
+    id: "a",
+    familyId: "keluarga",
+    userId: "budi",
+    walletId: "rumah",
+    categoryId: "gaji",
+    type: "income" as const,
+    amount: 0.1,
+    date: "2026-10-01",
+    description: "Pemasukan",
+  };
+  const saved = optimisticBalances(before, {
+    ...before,
+    transactions: [transaction, { ...transaction, id: "b", amount: 0.2 }],
+  });
+  expect(saved.familyBalance).toBe(0.3);
+  expect(saved.walletBalances?.rumah).toBe(0.3);
 });
 test("transfer satu operasi, saldo keluarga tetap dan target mengikuti CRUD", () => {
   const wallet = {

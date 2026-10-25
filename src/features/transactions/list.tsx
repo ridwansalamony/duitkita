@@ -1,6 +1,6 @@
 "use client";
 import { today, monthStart } from "@/lib/mode";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,15 +26,24 @@ export function TransactionsPage() {
   const [end, setEnd] = useState(today());
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
-  const transactions = visibleTransactions(data, familyId, user.id).filter(
-    (t) =>
-      (!search || t.description.toLowerCase().includes(search.toLowerCase())) &&
-      (!category || t.categoryId === category) &&
-      (!member || t.userId === member) &&
-      (!wallet || t.walletId === wallet || t.toWalletId === wallet) &&
-      (!start || t.date >= start) &&
-      (!end || t.date <= end) &&
-      (!type || t.type === type),
+  const visible = useMemo(
+    () => visibleTransactions(data, familyId, user.id),
+    [data, familyId, user.id],
+  );
+  const transactions = useMemo(
+    () =>
+      visible.filter(
+        (t) =>
+          (!search ||
+            t.description.toLowerCase().includes(search.toLowerCase())) &&
+          (!category || t.categoryId === category) &&
+          (!member || t.userId === member) &&
+          (!wallet || t.walletId === wallet || t.toWalletId === wallet) &&
+          (!start || t.date >= start) &&
+          (!end || t.date <= end) &&
+          (!type || t.type === type),
+      ),
+    [visible, search, category, member, wallet, start, end, type],
   );
   const totalPages = Math.max(1, Math.ceil(transactions.length / 8));
   const currentPage = Math.min(page, totalPages);
